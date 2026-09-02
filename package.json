@@ -1,0 +1,11 @@
+{
+  "name": "bifurcation-diagram",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export": "node export-static.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
