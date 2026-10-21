@@ -17,7 +17,6 @@
       <header class="hud">
         <p class="eyebrow">Bifurcation diagram</p>
         <h1 class="hud-title">Logistic map</h1>
-        <p class="hud-hint" id="hud-hint">Drag to pan · scroll or pinch to zoom · double-click to reset</p>
       </header>
       <div class="minimap-stack" id="minimap-stack">
         <div class="minimap" id="minimap" aria-hidden="true">
@@ -27,49 +26,107 @@
       </div>
       <div class="status hidden" id="status" role="status" aria-live="polite"></div>
       <div class="resolution" id="resolution" aria-live="polite">— × —</div>
-      <aside class="settings-panel" id="settings" aria-label="Diagram settings">
-        <p class="eyebrow">Settings</p>
-        <div class="setting">
-          <label class="setting-label" for="iterations-per-frame">Iterations per frame</label>
-          <div class="setting-row">
-            <input type="range" id="iterations-per-frame" min="1" max="256" step="1" value="64" />
-            <output class="setting-value" id="iterations-per-frame-value" for="iterations-per-frame">64</output>
+      <div class="control-panels" id="settings">
+        <aside class="sheet hidden" id="panel-settings" aria-label="Diagram settings" hidden>
+          <p class="eyebrow">Settings</p>
+          <div class="setting">
+            <label class="setting-label" for="iterations-per-frame">Iterations per frame</label>
+            <div class="setting-row">
+              <input type="range" id="iterations-per-frame" min="1" max="256" step="1" value="64" />
+              <output class="setting-value" id="iterations-per-frame-value" for="iterations-per-frame">64</output>
+            </div>
           </div>
-        </div>
-        <div class="setting">
-          <label class="setting-label" for="total-frames">Total frames</label>
-          <div class="setting-row">
-            <input type="range" id="total-frames" min="1" max="65536" step="1" value="2000" />
-            <output class="setting-value" id="total-frames-value" for="total-frames">2000</output>
+          <div class="setting">
+            <label class="setting-label" for="total-frames">Total frames</label>
+            <div class="setting-row">
+              <input type="range" id="total-frames" min="1" max="65536" step="1" value="2000" />
+              <output class="setting-value" id="total-frames-value" for="total-frames">2000</output>
+            </div>
           </div>
-        </div>
-        <div class="setting">
-          <label class="setting-label" for="horizontal-scale">Horizontal scale</label>
-          <div class="setting-row">
-            <input type="range" id="horizontal-scale" min="0.25" max="100" step="0.05" value="1" />
-            <output class="setting-value" id="horizontal-scale-value" for="horizontal-scale">1.00×</output>
+          <div class="setting">
+            <label class="setting-label" for="horizontal-scale">Horizontal scale</label>
+            <div class="setting-row">
+              <input type="range" id="horizontal-scale" min="0.25" max="100" step="0.05" value="1" />
+              <output class="setting-value" id="horizontal-scale-value" for="horizontal-scale">1.00×</output>
+            </div>
+            <p class="setting-hint">Relative stretch of the current view; above 1× magnifies horizontally.</p>
           </div>
-          <p class="setting-hint">Relative stretch of the current view; above 1× magnifies horizontally.</p>
-        </div>
-        <div class="setting">
-          <label class="setting-label" for="brightness">Brightness</label>
-          <div class="setting-row">
-            <input type="range" id="brightness" min="0" max="1000" step="1" value="667" />
-            <output class="setting-value" id="brightness-value" for="brightness">1.00</output>
+        </aside>
+        <aside class="sheet hidden" id="panel-image" aria-label="Image settings and screenshots" hidden>
+          <p class="eyebrow">Image</p>
+          <div class="setting">
+            <label class="setting-label" for="brightness">Brightness</label>
+            <div class="setting-row">
+              <input type="range" id="brightness" min="0" max="1000" step="1" value="667" />
+              <output class="setting-value" id="brightness-value" for="brightness">1.00</output>
+            </div>
           </div>
-        </div>
-        <div class="setting">
-          <label class="setting-label" for="colour-palette">Colour</label>
-          <div class="setting-row">
-            <select id="colour-palette" class="setting-select" aria-label="Colour palette"></select>
+          <div class="setting">
+            <label class="setting-label" for="colour-palette">Colour</label>
+            <div class="setting-row">
+              <select id="colour-palette" class="setting-select" aria-label="Colour palette"></select>
+            </div>
           </div>
-        </div>
-        <div class="screenshot-controls" role="group" aria-label="Screenshot">
-          <button type="button" id="screenshot-download">Download screenshot</button>
-          <button type="button" id="screenshot-upload" aria-describedby="screenshot-status">Upload screenshot</button>
-          <p id="screenshot-status" role="status" aria-live="polite">Uploads are stored on Baffled Cat and may appear in the public gallery.</p>
-        </div>
-      </aside>
+          <div class="screenshot-controls" role="group" aria-label="Screenshot">
+            <button type="button" id="screenshot-download">Download screenshot</button>
+            <button type="button" id="screenshot-upload" aria-describedby="screenshot-status">Upload screenshot</button>
+            <p id="screenshot-status" role="status" aria-live="polite">Uploads are stored on Baffled Cat and may appear in the public gallery.</p>
+          </div>
+        </aside>
+        <aside class="sheet sheet-info hidden" id="panel-info" aria-label="About this diagram" hidden>
+          <p class="eyebrow">About</p>
+          <div class="info-copy">
+            <p>
+              This is the bifurcation diagram of the logistic map
+              <span class="info-formula">x<sub>n+1</sub> = r · x<sub>n</sub> · (1 − x<sub>n</sub>)</span>.
+              The horizontal axis is the growth parameter <em>r</em>; the vertical axis is the long-term value of <em>x</em>.
+            </p>
+            <p>
+              As <em>r</em> increases, stable fixed points give way to period doubling and then chaos—
+              the classic cascade discovered by Robert May and analysed by Mitchell Feigenbaum.
+              Dense bands are chaotic attractors; gaps are periodic windows.
+            </p>
+            <p>
+              Drag to pan, scroll or pinch to zoom, and double-click (or use Home) to reset the view.
+              Accumulation builds detail over successive frames in high-precision arithmetic.
+            </p>
+          </div>
+        </aside>
+      </div>
+      <nav class="dock" id="dock" aria-label="Main controls">
+        <button type="button" class="dock-btn" id="dock-home" title="Reset view" aria-label="Reset view">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="dock-btn" id="dock-settings" data-panel="settings" title="Settings" aria-label="Settings" aria-controls="panel-settings" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 7h10M14 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0ZM20 17H10M10 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path d="M4 17h2M18 7h2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button type="button" class="dock-btn" id="dock-image" data-panel="image" title="Image" aria-label="Image" aria-controls="panel-image" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/>
+            <circle cx="9" cy="10" r="1.6" fill="currentColor"/>
+            <path d="m7.5 16 3.2-3.5 2.3 2.4L16 12l3 4H7.5Z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button type="button" class="dock-btn" id="dock-fullscreen" title="Fullscreen" aria-label="Enter fullscreen">
+          <svg class="dock-icon-enter" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="dock-icon-exit hidden" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="dock-btn" id="dock-info" data-panel="info" title="About" aria-label="About" aria-controls="panel-info" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.75"/>
+            <path d="M12 10.5v5.25M12 8.25h.01" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </nav>
     </div>
   </div>
   <script type="module" src="js/main.js"></script>

@@ -57,6 +57,11 @@ See [rendering.md](rendering.md) for accumulation and normalization details.
 
 During pan/zoom the last frame is transformed interactively. After 200 ms of inactivity the visible data window is recomputed at full canvas resolution, then detail accumulates progressively over multiple frames.
 
+The bottom toolbar opens Settings, Image and About panels, resets the view with Home,
+and enters fullscreen where supported. Panels start closed and Escape dismisses them.
+On touch devices the minimap and resolution readout are hidden to leave more room
+for the diagram; panels scroll within the available viewport height.
+
 ## Settings
 
 | Control | Description |
@@ -69,7 +74,7 @@ During pan/zoom the last frame is transformed interactively. After 200 ms of ina
 
 ## Screenshots
 
-The settings panel offers **Download screenshot** (local JPEG) and
+The Image panel offers **Download screenshot** (local JPEG) and
 **Upload screenshot** (server storage using ScreenGrabber). Both capture the
 current diagram without overlays, preserve its aspect ratio and fit within
 1920 × 1080 and 2 MiB. Uploads include a 256 × 256 JPEG thumbnail and metadata

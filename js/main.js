@@ -2,7 +2,7 @@ import { initWebGPU } from "./gpu/gpu.js";
 import { BifurcationPass } from "./render/bifurcationPass.js";
 import { CpuBifurcationPass } from "./render/cpuBifurcationPass.js";
 import { Viewport } from "./ui/viewport.js";
-import { AppChrome } from "./ui/appChrome.js";
+import { AppChrome, ControlDock } from "./ui/appChrome.js";
 import { SettingsPanel, ACCUMULATION_DEFAULTS } from "./ui/settingsPanel.js";
 import { Minimap } from "./ui/minimap.js";
 import { CursorReadout } from "./ui/cursorReadout.js";
@@ -20,6 +20,20 @@ const minimapReadoutEl = /** @type {HTMLElement} */ (document.getElementById("mi
 
 const chrome = new AppChrome({ overlay, statusEl, hintEl, resolutionEl });
 const camera = new Camera();
+
+new ControlDock({
+  root: document.getElementById("dock"),
+  panels: {
+    settings: document.getElementById("panel-settings"),
+    image: document.getElementById("panel-image"),
+    info: document.getElementById("panel-info"),
+  },
+  onHome: () => {
+    camera.reset();
+    onReset();
+  },
+  fullscreenTarget: document.getElementById("app"),
+});
 
 /** @type {BifurcationPass | null} */
 let displayPass = null;

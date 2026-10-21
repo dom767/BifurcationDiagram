@@ -1,4 +1,12 @@
 :root {
+  --chrome-gap: 0.5rem;
+  --dock-pad: 0.35rem;
+  --dock-btn-size: 2.75rem;
+  --dock-height: calc(var(--dock-pad) * 2 + var(--dock-btn-size));
+  --status-slot: 1.5rem;
+  --chrome-bottom: max(var(--chrome-gap), env(safe-area-inset-bottom));
+  --dock-bottom: calc(var(--chrome-bottom) + var(--status-slot) + var(--chrome-gap));
+  --panels-bottom: calc(var(--dock-bottom) + var(--dock-height) + var(--chrome-gap));
   --bg: #1c1812;
   --bg-raised: #262019;
   --bg-raised-hover: #2e271e;
@@ -76,7 +84,6 @@ body {
   right: 0;
   padding: clamp(1rem, 3vw, 1.5rem) clamp(1.25rem, 4vw, 2rem);
   padding-top: max(clamp(1rem, 3vw, 1.5rem), env(safe-area-inset-top));
-  background: linear-gradient(to bottom, rgba(28, 24, 18, 0.88) 0%, rgba(28, 24, 18, 0.45) 70%, transparent 100%);
 }
 
 .eyebrow {
@@ -108,13 +115,6 @@ body {
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
-}
-
-.hud-hint {
-  margin: 0.375rem 0 0;
-  font-size: clamp(0.75rem, 2vw, 0.875rem);
-  color: var(--text-muted);
-  max-width: 36rem;
 }
 
 .minimap-stack {
@@ -168,21 +168,30 @@ body {
 
 .status {
   position: absolute;
-  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  bottom: var(--chrome-bottom);
   left: 50%;
-  transform: translateX(-50%);
-  padding: 0.625rem 1rem;
+  transform: translate(-50%);
+  box-sizing: border-box;
+  min-height: var(--status-slot);
+  padding: 0.35rem 0.75rem;
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
   border: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
+  line-height: 1.2;
   color: var(--text-muted);
   max-width: min(90vw, 28rem);
   text-align: center;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 
 .status.is-error {
+  white-space: normal;
   color: var(--text);
   border-color: var(--accent-amber);
   background: var(--accent-amber-soft);
@@ -200,30 +209,8 @@ body {
   user-select: none;
 }
 
-.settings-panel {
-  position: absolute;
-  right: clamp(1rem, 3vw, 1.5rem);
-  bottom: max(clamp(1rem, 3vw, 1.5rem), env(safe-area-inset-bottom));
-  width: min(18rem, calc(100vw - 2rem));
-  padding: 1rem 1.125rem;
-  border-radius: var(--radius);
-  background: rgba(38, 32, 25, 0.92);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(8px);
-  pointer-events: auto;
-}
-
-.settings-panel .eyebrow {
-  margin-bottom: 0.75rem;
-}
-
 .setting + .setting {
   margin-top: 0.875rem;
-}
-
-.settings-panel {
-  max-height: calc(100dvh - 2rem);
-  overflow-y: auto;
 }
 
 .screenshot-controls {
@@ -355,12 +342,6 @@ body {
   color: var(--text);
 }
 
-@media (max-width: 768px) {
-  .hud-hint {
-    font-size: 0.75rem;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -369,4 +350,126 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.control-panels {
+  position: absolute;
+  left: 50%;
+  bottom: var(--panels-bottom);
+  transform: translate(-50%);
+  width: min(20rem, calc(100vw - 2rem));
+  pointer-events: none;
+  z-index: 3;
+}
+
+.sheet {
+  width: 100%;
+  padding: 1rem 1.125rem;
+  border-radius: var(--radius);
+  background: rgba(38, 32, 25, 0.94);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+}
+
+.sheet .eyebrow {
+  margin-bottom: 0.75rem;
+}
+
+.sheet-info .info-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sheet-info .info-copy p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.sheet-info .info-formula {
+  display: inline-block;
+  margin: 0.15rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+
+.dock {
+  position: absolute;
+  left: 50%;
+  bottom: var(--dock-bottom);
+  transform: translate(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: var(--dock-pad);
+  border-radius: 999px;
+  background: rgba(38, 32, 25, 0.94);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.dock-btn {
+  display: grid;
+  place-items: center;
+  width: var(--dock-btn-size);
+  height: var(--dock-btn-size);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.dock-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: block;
+  grid-area: 1 / 1;
+}
+
+.dock-btn:hover {
+  color: var(--text);
+  background: var(--bg-raised-hover);
+}
+
+.dock-btn.is-active {
+  color: var(--accent-amber);
+  background: var(--accent-amber-soft);
+}
+
+.dock-btn:focus-visible {
+  outline: 2px solid var(--accent-amber);
+  outline-offset: 2px;
+}
+
+/* Keep sheets inside short landscape viewports and clear of the dock. */
+.sheet {
+  max-height: min(28rem, calc(100dvh - var(--panels-bottom) - max(1rem, env(safe-area-inset-top))));
+  overscroll-behavior: contain;
+}
+
+.setting-row input[type="range"],
+.setting-select {
+  min-width: 0;
+}
+
+@media not ((hover: hover) and (pointer: fine)) {
+  .minimap-stack,
+  .resolution {
+    display: none !important;
+  }
+}
+
+.dock-btn[hidden] {
+  display: none;
 }
