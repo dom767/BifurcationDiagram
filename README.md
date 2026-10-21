@@ -65,6 +65,39 @@ During pan/zoom the last frame is transformed interactively. After 200 ms of ina
 | Brightness | Display gain (logarithmic); 1.0 matches the default look |
 | Colour | Density gradient from the style-guide palette |
 
+## Screenshots
+
+The settings panel offers **Download screenshot** (local JPEG) and
+**Upload screenshot** (server storage using ScreenGrabber). Both capture the
+current diagram without overlays, preserve its aspect ratio and fit within
+1920 × 1080 and 2 MiB. Uploads include a 256 × 256 JPEG thumbnail and metadata
+for view bounds, pan/zoom, settings and accumulated frames. Uploads are explicit
+and may become public after moderation; no upload happens on download.
+
+Server setup still requires the ScreenGrabber administrator to:
+
+1. Set the public Turnstile widget site key in `js/shotsConfig.js`.
+   Keep `devBypassTurnstile: false` for production.
+2. Register app ID `bifurcation` in ScreenGrabber's `ALLOWED_APP_IDS` and add
+   production/local origins to `ALLOWED_ORIGINS` (including port 7100 for this
+   agent's local testing, if desired).
+3. Add this consumer to ScreenGrabber's `apps.json`, then redeploy ScreenGrabber:
+
+   ```json
+   {
+     "name": "bifurcation",
+     "root": "../BifurcationDiagram",
+     "sdkDest": "js/vendor/baffled-screenshots.js",
+     "shotsConfig": "js/shotsConfig.js"
+   }
+   ```
+
+The SDK is vendored from ScreenGrabber; see `js/vendor/README.md` for its pinned
+revision. Production export bundles it automatically through `js/main.js`.
+Without the site key, upload reports a configuration message and local downloads
+remain available. Network, CORS and verification failures are shown in the panel
+and the controls can be retried.
+
 ## Browser requirements
 
 - WebGPU support (Chrome 113+, Edge 113+, or other compatible browsers) — used for canvas blit only

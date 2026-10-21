@@ -7,6 +7,7 @@ import { SettingsPanel, ACCUMULATION_DEFAULTS } from "./ui/settingsPanel.js";
 import { Minimap } from "./ui/minimap.js";
 import { CursorReadout } from "./ui/cursorReadout.js";
 import { Camera } from "./math/camera.js";
+import { initScreenshots, snapshotCanvas } from "./ui/screenshots.js";
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("view"));
 const overlay = /** @type {HTMLElement} */ (document.getElementById("overlay"));
@@ -46,6 +47,27 @@ const accumulation = {
   busy: false,
   currentFrame: 0,
 };
+
+initScreenshots(() => {
+  if (!computePass?.plotPixels || !accumulation.currentFrame || !viewport) {
+    throw new Error("Wait for the diagram to render first.");
+  }
+  if (canvas.width !== lastFrameWidth || canvas.height !== lastFrameHeight) {
+    throw new Error("Wait for the resized diagram to render first.");
+  }
+  drawFrame();
+  return {
+    image: snapshotCanvas(canvas),
+    meta: {
+      bounds: { ...camera.bounds },
+      viewDelta: { ...camera.viewDelta },
+      settings: { ...accumulationSettings },
+      accumulatedFrames: accumulation.currentFrame,
+      sourceWidth: canvas.width,
+      sourceHeight: canvas.height,
+    },
+  };
+});
 
 function requestAccumulationRestart() {
   refreshGeneration++;
