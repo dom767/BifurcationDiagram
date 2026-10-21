@@ -4,13 +4,15 @@ Interactive viewer for the classic bifurcation diagram of the logistic map. Accu
 
 ## Quick start
 
-```bash
-npx serve -p 8080
+Double-click `StartServer.cmd` (requires [Node.js LTS](https://nodejs.org/)), or run:
+
+```powershell
+.\StartServer.cmd
 ```
 
 Open [http://localhost:8080](http://localhost:8080) in a WebGPU-capable browser (Chrome or Edge 113+).
 
-No build step is required for development.
+No build step is required for development. The launcher downloads the static server through npx when needed. Set `PORT` to use another port. Close the server window or press Ctrl+C to stop.
 
 ## Production export
 
