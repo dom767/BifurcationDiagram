@@ -1,6 +1,6 @@
 /**
  * Pulls the ScreenGrabber SDK into js/vendor/ before an export is bundled.
- * See AgentStandards guidelines/libraries.md: each app pulls the SDK itself, and the export
+ * See AgentController standards/guidelines/libraries.md: each app pulls the SDK itself, and the export
  * fails rather than shipping a stale or partial copy.
  *
  *   import { refreshScreenGrabberSdk } from "./scripts/refresh-screengrabber-sdk.mjs";
