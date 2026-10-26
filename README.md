@@ -88,20 +88,12 @@ Server setup still requires the ScreenGrabber administrator to:
    Keep `devBypassTurnstile: false` for production.
 2. Register app ID `bifurcation` in ScreenGrabber's `ALLOWED_APP_IDS` and add
    production/local origins to `ALLOWED_ORIGINS` (including port 7100 for this
-   agent's local testing, if desired).
-3. Add this consumer to ScreenGrabber's `apps.json`, then redeploy ScreenGrabber:
+   agent's local testing, if desired), then redeploy ScreenGrabber.
 
-   ```json
-   {
-     "name": "bifurcation",
-     "root": "../BifurcationDiagram",
-     "sdkDest": "js/vendor/baffled-screenshots.js",
-     "shotsConfig": "js/shotsConfig.js"
-   }
-   ```
-
-The SDK is vendored from ScreenGrabber; see `js/vendor/README.md` for its pinned
-revision. Production export bundles it automatically through `js/main.js`.
+ScreenGrabber doesn't push its SDK to this app: the app pulls it. The SDK is
+vendored from ScreenGrabber; see `js/vendor/README.md` for its pinned revision.
+Every export first re-downloads it from ScreenGrabber's `master` and fails if it
+can't (see [deploy.md](deploy.md)), then bundles it through `js/main.js`.
 Without the site key, upload reports a configuration message and local downloads
 remain available. Network, CORS and verification failures are shown in the panel
 and the controls can be retried.

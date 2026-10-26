@@ -15,6 +15,21 @@ Project-specific notes for [deploy_guide.md](deploy_guide.md).
 
 No runtime JSON catalog. No separate data refresh step before export.
 
+## ScreenGrabber SDK refresh
+
+Every export (local or release) first pulls the ScreenGrabber SDK from
+`https://raw.githubusercontent.com/dom767/ScreenGrabber/master/sdk/baffled-screenshots.js`
+into `js/vendor/baffled-screenshots.js` (`scripts/refresh-screengrabber-sdk.mjs`, called by
+`export-static.mjs` before a release number is claimed or anything is bundled).
+
+- The export **fails** if the download errors, times out, returns anything but HTTP 200, or
+  returns an empty body or one without `createBaffledScreenshots`. There is no offline fallback:
+  a stale SDK is never packaged silently.
+- The file is only rewritten when upstream differs (ignoring line endings and the provenance
+  header). Its header then records the ScreenGrabber commit. Commit the refreshed file.
+- The checked-in copy stays the one used for source development, so the app runs from source
+  without network access.
+
 ## Default hosting
 
 | Parameter | Default |

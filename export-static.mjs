@@ -7,6 +7,9 @@
  *                                     next release; it doesn't use up a release number
  *   node export-static.mjs --release  claims the next release number on GitHub (VERSION, see
  *                                     scripts/release-version.mjs) and builds Export/Version<N>
+ *
+ * Either way it first refreshes js/vendor/baffled-screenshots.js from ScreenGrabber
+ * (scripts/refresh-screengrabber-sdk.mjs) and fails if that download fails.
  */
 
 import esbuild from "esbuild";
@@ -14,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { claimVersion, currentVersion, sourceOf } from "./scripts/release-version.mjs";
+import { refreshScreenGrabberSdk } from "./scripts/refresh-screengrabber-sdk.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const EXPORT_ROOT = path.join(ROOT, "Export");
@@ -98,6 +102,8 @@ function printUploadCommands(version, outDir, bucket, prefix) {
 
 async function main() {
   const release = process.argv.includes("--release");
+  // Before claiming a number or bundling: never package a stale SDK.
+  await refreshScreenGrabberSdk(ROOT);
   const source = sourceOf(ROOT);
   if (release && source.uncommittedChanges) {
     console.warn("Warning: this clone has uncommitted changes, so this release won't match any commit on GitHub.");

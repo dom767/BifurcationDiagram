@@ -54,6 +54,7 @@ Source tree
     │
     ▼
 1. (Optional) Refresh fetched data — separate command, not part of export
+   Vendored shared libraries (ScreenGrabber SDK) ARE refreshed here; export fails if that fails
     │
     ▼
 2. Choose next Export/VersionN
@@ -137,7 +138,7 @@ If using gzip in production:
 - **Do not** set `Content-Encoding: gzip` — the client decompresses with `DecompressionStream`.
 - Append `?v=N` to fetch URLs when the asset-version global is set.
 
-**Separate data refresh from export.** A flaky upstream API must not block a release build. Run fetch/import scripts explicitly before export when you want fresh data.
+**Separate data refresh from export.** A flaky upstream API must not block a release build. Run fetch/import scripts explicitly before export when you want fresh data. Vendored shared libraries are the exception: the export refreshes the ScreenGrabber SDK itself and fails if it can't (see [deploy.md](deploy.md)).
 
 ---
 
