@@ -38,39 +38,68 @@ export async function encodeScreenshot(image) {
 }
 
 export function initScreenshots(capture) {
-  const download = document.getElementById("screenshot-download");
+  const take = document.getElementById("screenshot-take");
+  const savePanel = document.getElementById("screenshot-save-panel");
+  const saveTitle = document.getElementById("screenshot-save-title");
   const upload = document.getElementById("screenshot-upload");
   const status = document.getElementById("screenshot-status");
   const shots = createBaffledScreenshots(shotsConfig);
+  let captured = null;
 
-  async function save(toServer) {
-    download.disabled = upload.disabled = true;
-    status.textContent = toServer ? "Preparing upload…" : "Preparing screenshot…";
+  function showSavePanel() {
+    savePanel.hidden = false;
+    savePanel.classList.remove("hidden");
+    take.setAttribute("aria-expanded", "true");
+  }
+
+  async function takeScreenshot() {
+    take.disabled = upload.disabled = true;
+    showSavePanel();
+    saveTitle.textContent = "Taking screenshot…";
+    status.textContent = "Preparing screenshot…";
     try {
-      if (toServer && !shotsConfig.turnstileSiteKey && !shotsConfig.devBypassTurnstile) {
-        throw new Error("Server uploads need a Turnstile site key. You can still download a screenshot.");
-      }
       const { image, meta } = capture();
       const blobs = await encodeScreenshot(image);
-      if (toServer) {
-        status.textContent = "Uploading screenshot…";
-        await shots.upload({ ...blobs, meta, pageUrl: location.origin + location.pathname, title: "Logistic bifurcation diagram" });
-        status.textContent = "Screenshot uploaded. Gallery visibility depends on moderation.";
-      } else {
-        const url = URL.createObjectURL(blobs.imageBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `bifurcation-${new Date().toISOString().replace(/[:.]/g, "-")}.jpg`;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-        status.textContent = "Screenshot downloaded.";
-      }
+      captured = { ...blobs, meta };
+      const url = URL.createObjectURL(blobs.imageBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `bifurcation-${new Date().toISOString().replace(/[:.]/g, "-")}.jpg`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      saveTitle.textContent = "Screenshot downloaded";
+      status.textContent = "Ready to save to the server.";
     } catch (error) {
+      captured = null;
+      saveTitle.textContent = "Screenshot not saved";
       status.textContent = `Screenshot failed: ${error instanceof Error ? error.message : "Please try again."}`;
     } finally {
-      download.disabled = upload.disabled = false;
+      take.disabled = false;
+      upload.disabled = !captured;
     }
   }
-  download.addEventListener("click", () => void save(false));
-  upload.addEventListener("click", () => void save(true));
+
+  async function uploadScreenshot() {
+    if (!captured) return;
+    take.disabled = upload.disabled = true;
+    status.textContent = "Uploading screenshot…";
+    try {
+      if (!shotsConfig.turnstileSiteKey && !shotsConfig.devBypassTurnstile) {
+        throw new Error("Server uploads need a Turnstile site key. Your local screenshot is still saved.");
+      }
+      await shots.upload({
+        ...captured,
+        pageUrl: location.origin + location.pathname,
+        title: "Logistic bifurcation diagram",
+      });
+      status.textContent = "Screenshot saved to the server. Gallery visibility depends on moderation.";
+    } catch (error) {
+      status.textContent = `Server save failed: ${error instanceof Error ? error.message : "Please try again."}`;
+    } finally {
+      take.disabled = upload.disabled = false;
+    }
+  }
+
+  take.addEventListener("click", () => void takeScreenshot());
+  upload.addEventListener("click", () => void uploadScreenshot());
 }

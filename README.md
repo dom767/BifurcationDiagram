@@ -74,12 +74,13 @@ for the diagram; panels scroll within the available viewport height.
 
 ## Screenshots
 
-The Image panel offers **Download screenshot** (local JPEG) and
-**Upload screenshot** (server storage using ScreenGrabber). Both capture the
-current diagram without overlays, preserve its aspect ratio and fit within
-1920 × 1080 and 2 MiB. Uploads include a 256 × 256 JPEG thumbnail and metadata
-for view bounds, pan/zoom, settings and accumulated frames. Uploads are explicit
-and may become public after moderation; no upload happens on download.
+The Image panel offers a single **Take screenshot** action. It downloads a local
+JPEG, then opens a panel where that same screenshot can optionally be saved to
+the server using ScreenGrabber. Screenshots capture the current diagram without
+overlays, preserve its aspect ratio and fit within 1920 × 1080 and 2 MiB. Server
+copies include a 256 × 256 JPEG thumbnail and metadata for view bounds, pan/zoom,
+settings and accumulated frames. Uploads are explicit and may become public
+after moderation; taking a screenshot alone never uploads it.
 
 Server setup still requires the ScreenGrabber administrator to:
 

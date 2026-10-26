@@ -242,6 +242,31 @@ body {
   cursor: wait;
 }
 
+.screenshot-save-panel {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.screenshot-save-title,
+.screenshot-save-copy {
+  margin: 0;
+}
+
+.screenshot-save-title {
+  font: 500 0.875rem var(--font-display);
+  color: var(--text);
+}
+
+.screenshot-save-copy {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 #screenshot-status {
   margin: 0;
   color: var(--text-muted);
