@@ -57,8 +57,15 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "npm install failed." }
   }
 
-  Write-Host "Running export-static.mjs..."
-  node export-static.mjs
+  # A real upload is a release: it claims the next version number on GitHub (VERSION) first.
+  # -SkipUpload builds locally without using up a number.
+  if ($SkipUpload) {
+    Write-Host "Running export-static.mjs (local build)..."
+    node export-static.mjs
+  } else {
+    Write-Host "Running export-static.mjs --release..."
+    node export-static.mjs --release
+  }
   if ($LASTEXITCODE -ne 0) { throw "export-static.mjs failed." }
 
   $manifest = Read-LatestManifest (Join-Path $Root "Export")
@@ -70,7 +77,7 @@ try {
   }
 
   Write-Host ""
-  Write-Host "Export Version$version ready at $($manifest.dir)"
+  Write-Host "Export $version ready at $($manifest.dir)"
 
   if ($SkipUpload) {
     Write-Host "Skipping upload (-SkipUpload)."

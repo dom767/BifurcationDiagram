@@ -2,27 +2,53 @@
 /**
  * Static export packager for the bifurcation diagram viewer.
  * See deploy_guide.md for conventions.
+ *
+ *   node export-static.mjs            a local build: Export/Version<N>-local<k>, where N is the
+ *                                     next release; it doesn't use up a release number
+ *   node export-static.mjs --release  claims the next release number on GitHub (VERSION, see
+ *                                     scripts/release-version.mjs) and builds Export/Version<N>
  */
 
 import esbuild from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { claimVersion, currentVersion, sourceOf } from "./scripts/release-version.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const EXPORT_ROOT = path.join(ROOT, "Export");
 const ASSET_VERSION_GLOBAL = "__BIFURCATION_DIAGRAM_ASSET_VERSION__";
 const SHADER_REL = "js/render/shaders/logistic.wgsl";
 
-function nextVersion() {
-  if (!fs.existsSync(EXPORT_ROOT)) return 1;
+/** The highest release folder here (Export/VersionN), so a claim never reuses one. */
+function highestLocalRelease() {
+  if (!fs.existsSync(EXPORT_ROOT)) return 0;
   const versions = fs
     .readdirSync(EXPORT_ROOT, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && /^Version\d+$/.test(entry.name))
     .map((entry) => Number(entry.name.replace("Version", "")))
     .filter((n) => Number.isFinite(n));
 
-  return versions.length ? Math.max(...versions) + 1 : 1;
+  return versions.length ? Math.max(...versions) : 0;
+}
+
+/**
+ * The version to stamp and the folder to build into. A release claims its number on GitHub;
+ * a local build is "<next>-local<k>", never overwriting anything.
+ * @param {boolean} release
+ */
+function pickVersion(release) {
+  if (release) {
+    const n = claimVersion(ROOT, { floor: highestLocalRelease() });
+    const outDir = path.join(EXPORT_ROOT, `Version${n}`);
+    fs.rmSync(outDir, { recursive: true, force: true });
+    return { version: String(n), outDir };
+  }
+  const next = currentVersion(ROOT) + 1;
+  for (let k = 1; ; k++) {
+    const outDir = path.join(EXPORT_ROOT, `Version${next}-local${k}`);
+    if (!fs.existsSync(outDir)) return { version: `${next}-local${k}`, outDir };
+  }
 }
 
 function ensureDir(dir) {
@@ -71,13 +97,17 @@ function printUploadCommands(version, outDir, bucket, prefix) {
 }
 
 async function main() {
-  const version = nextVersion();
-  const outDir = path.join(EXPORT_ROOT, `Version${version}`);
+  const release = process.argv.includes("--release");
+  const source = sourceOf(ROOT);
+  if (release && source.uncommittedChanges) {
+    console.warn("Warning: this clone has uncommitted changes, so this release won't match any commit on GitHub.");
+  }
+  const { version, outDir } = pickVersion(release);
   const sourceHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 
   ensureDir(outDir);
 
-  console.log(`Exporting Version${version} → ${path.relative(ROOT, outDir)}`);
+  console.log(`Exporting ${release ? "release" : "local build"} ${version} → ${path.relative(ROOT, outDir)}`);
 
   await esbuild.build({
     entryPoints: [path.join(ROOT, "js/main.js")],
@@ -104,8 +134,10 @@ async function main() {
 
   const manifest = {
     version,
+    release,
     dir: path.relative(ROOT, outDir).replace(/\\/g, "/"),
     exportedAt: new Date().toISOString(),
+    source,
     bucket: process.env.BIFURCATION_S3_BUCKET ?? "baffledcat.com",
     prefix: process.env.BIFURCATION_S3_PREFIX ?? "bifurcation/",
   };
