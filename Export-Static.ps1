@@ -1,6 +1,7 @@
 # Static export and optional S3 upload for the bifurcation diagram viewer.
 # See deploy_guide.md and deploy.md.
 
+[CmdletBinding()]
 param(
   [string]$S3Bucket = "baffledcat.com",
   [string]$S3Prefix = "bifurcation/",
@@ -29,7 +30,7 @@ function Read-LatestManifest {
   param([string]$ExportRoot)
   $manifestPath = Join-Path $ExportRoot "latest.json"
   if (-not (Test-Path $manifestPath)) {
-    throw "Missing Export/latest.json — export did not complete."
+    throw "Missing Export/latest.json - export did not complete."
   }
   return Get-Content $manifestPath -Raw | ConvertFrom-Json
 }
