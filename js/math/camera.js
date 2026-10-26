@@ -67,6 +67,12 @@ export class Camera {
     return this.renderBounds;
   }
 
+  /** @param {RenderBounds} bounds */
+  setBounds(bounds) {
+    this.renderBounds = { ...bounds };
+    this.viewDelta = { panX: 0, panY: 0, scale: 1 };
+  }
+
   reset() {
     this.renderBounds = this.defaultBounds();
     this.viewDelta = { panX: 0, panY: 0, scale: 1 };

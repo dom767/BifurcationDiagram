@@ -59,8 +59,9 @@ export function initScreenshots(capture) {
     status.textContent = "Preparing screenshot…";
     try {
       const { image, meta } = capture();
+      const pageUrl = location.href;
       const blobs = await encodeScreenshot(image);
-      captured = { ...blobs, meta };
+      captured = { ...blobs, meta, pageUrl };
       const url = URL.createObjectURL(blobs.imageBlob);
       const link = document.createElement("a");
       link.href = url;
@@ -89,7 +90,6 @@ export function initScreenshots(capture) {
       }
       await shots.upload({
         ...captured,
-        pageUrl: location.origin + location.pathname,
         title: "Logistic bifurcation diagram",
       });
       status.textContent = "Screenshot saved to the server. Gallery visibility depends on moderation.";

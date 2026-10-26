@@ -8,6 +8,7 @@ import { Minimap } from "./ui/minimap.js";
 import { CursorReadout } from "./ui/cursorReadout.js";
 import { Camera } from "./math/camera.js";
 import { initScreenshots, snapshotCanvas } from "./ui/screenshots.js";
+import { readUrlState, writeUrlState } from "./ui/urlState.js";
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("view"));
 const overlay = /** @type {HTMLElement} */ (document.getElementById("overlay"));
@@ -94,6 +95,7 @@ function applyDisplaySettings({ brightness, paletteId }) {
   computePass.setBrightness(brightness);
   computePass.setPalette(paletteId);
   computePass.buildPlotPixels();
+  writeUrlState(camera.bounds, accumulationSettings);
   minimap?.setDisplaySettings({ brightness, paletteId });
   drawFrame();
 }
@@ -179,6 +181,7 @@ async function startAccumulation() {
   computePass.setBrightness(accumulationSettings.brightness);
   computePass.setPalette(accumulationSettings.paletteId);
   computePass.beginAccumulation(camera.bounds, width, height, accumulationSettings);
+  writeUrlState(camera.bounds, accumulationSettings);
   chrome.setProgress(0, accumulationSettings.totalFrames);
 
   if (generation !== refreshGeneration) return;
@@ -291,7 +294,12 @@ async function main() {
       () => viewport.getCanvasSize(),
       (clientX, clientY) => viewport.clientToCanvas(clientX, clientY)
     );
-    new SettingsPanel({ root: settingsEl, onChange: onSettingsChange });
+    const settingsPanel = new SettingsPanel({ root: settingsEl, onChange: onSettingsChange });
+
+    const urlState = readUrlState();
+    if (urlState.bounds) camera.setBounds(urlState.bounds);
+    settingsPanel.setDisplaySettings(urlState);
+    accumulationSettings = { ...accumulationSettings, ...settingsPanel.getSettings() };
 
     minimap = new Minimap(minimapCanvas);
     void minimap.start().then(() => {

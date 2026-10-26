@@ -124,6 +124,16 @@ export class SettingsPanel {
     );
   }
 
+  /**
+   * Set display controls without emitting a change (e.g. restoring from the URL).
+   * @param {{ brightness?: number, paletteId?: string }} settings
+   */
+  setDisplaySettings({ brightness, paletteId }) {
+    if (brightness != null) this.brightnessInput.value = String(brightnessToSlider(brightness));
+    if (paletteId && PALETTES.some((p) => p.id === paletteId)) this.paletteSelect.value = paletteId;
+    this.syncOutputs();
+  }
+
   emitChange() {
     this.syncOutputs();
     this.onChange(this.getSettings());
