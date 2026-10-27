@@ -68,13 +68,7 @@
             </div>
           </div>
           <div class="screenshot-controls" role="group" aria-label="Screenshot">
-            <button type="button" id="screenshot-take" aria-controls="screenshot-save-panel" aria-expanded="false">Take screenshot</button>
-            <section class="screenshot-save-panel hidden" id="screenshot-save-panel" aria-label="Screenshot options" hidden>
-              <p class="screenshot-save-title" id="screenshot-save-title">Taking screenshot…</p>
-              <p class="screenshot-save-copy">You can also save this screenshot to Baffled Cat. Server copies may appear in the public gallery after moderation.</p>
-              <button type="button" id="screenshot-upload" aria-describedby="screenshot-status">Save to server</button>
-              <p id="screenshot-status" role="status" aria-live="polite"></p>
-            </section>
+            <button type="button" id="screenshot-take" aria-haspopup="dialog" aria-controls="screenshot-panel" aria-expanded="false">Take screenshot</button>
           </div>
         </aside>
         <aside class="sheet sheet-info hidden" id="panel-info" aria-label="About this diagram" hidden>
@@ -133,6 +127,46 @@
       </nav>
     </div>
   </div>
+  <dialog id="screenshot-panel" class="bc-shot-dialog" aria-labelledby="screenshot-panel-title">
+    <form method="dialog" class="bc-shot-panel" id="screenshot-form">
+      <header class="bc-shot-panel__head">
+        <h2 id="screenshot-panel-title" class="bc-shot-panel__title">Take screenshot</h2>
+        <button type="button" class="bc-shot-panel__close" id="screenshot-close-btn" aria-label="Close">&times;</button>
+      </header>
+      <div class="bc-shot-panel__preview-wrap">
+        <canvas id="screenshot-preview" class="bc-shot-panel__preview" width="480" height="270" role="img" aria-label="Screenshot preview"></canvas>
+      </div>
+      <div class="bc-shot-panel__controls">
+        <div class="bc-shot-field">
+          <div class="bc-shot-field__label-row">
+            <label for="screenshot-brightness" class="bc-shot-field__label">Brightness</label>
+            <output for="screenshot-brightness" id="screenshot-brightness-val" class="bc-shot-field__value">100%</output>
+          </div>
+          <input type="range" id="screenshot-brightness" min="50" max="150" step="1" value="100" />
+        </div>
+        <div class="bc-shot-field">
+          <div class="bc-shot-field__label-row">
+            <label for="screenshot-contrast" class="bc-shot-field__label">Contrast</label>
+            <output for="screenshot-contrast" id="screenshot-contrast-val" class="bc-shot-field__value">100%</output>
+          </div>
+          <input type="range" id="screenshot-contrast" min="50" max="150" step="1" value="100" />
+        </div>
+        <label class="bc-shot-checkbox">
+          <input type="checkbox" id="screenshot-upload-check" />
+          <span>Upload to baffledcat.com</span>
+        </label>
+        <p class="bc-shot-panel__note">Uploaded screenshots may appear in the public gallery after moderation.</p>
+      </div>
+      <p id="screenshot-status" class="bc-shot-panel__status" role="status" aria-live="polite" hidden></p>
+      <footer class="bc-shot-panel__actions">
+        <button type="button" class="bc-btn bc-btn--secondary" id="screenshot-reset-btn">Reset</button>
+        <div class="bc-shot-panel__actions-right">
+          <button type="button" class="bc-btn bc-btn--secondary" id="screenshot-cancel-btn">Cancel</button>
+          <button type="button" class="bc-btn bc-btn--primary" id="screenshot-capture-btn">Capture</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

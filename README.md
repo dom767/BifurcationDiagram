@@ -74,13 +74,16 @@ for the diagram; panels scroll within the available viewport height.
 
 ## Screenshots
 
-The Image panel offers a single **Take screenshot** action. It downloads a local
-JPEG, then opens a panel where that same screenshot can optionally be saved to
-the server using ScreenGrabber. Screenshots capture the current diagram without
-overlays, preserve its aspect ratio and fit within 1920 × 1080 and 2 MiB. Server
-copies include a 256 × 256 JPEG thumbnail and metadata for view bounds, pan/zoom,
-settings and accumulated frames. Uploads are explicit and may become public
-after moderation; taking a screenshot alone never uploads it.
+The Image panel offers a single **Take screenshot** action, following
+ScreenGrabber's `TAKE_SCREENSHOT_GUI.md`. It snapshots the current diagram
+(without overlays) and opens a **Take screenshot** dialog with a live preview,
+Brightness and Contrast sliders (50–150 %, with Reset) and an **Upload to
+baffledcat.com** checkbox (unchecked by default; the choice is remembered).
+**Capture** bakes the adjustments into a JPEG that preserves the aspect ratio
+and fits within 1920 × 1080 and 2 MiB, always downloads it, and — only when the
+checkbox is ticked — uploads it with a 256 × 256 centre-cropped thumbnail and
+metadata for view bounds, pan/zoom, settings and accumulated frames. Uploads
+may become public after moderation.
 
 Server setup still requires the ScreenGrabber administrator to:
 
