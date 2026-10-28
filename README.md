@@ -69,12 +69,26 @@ for the diagram; panels scroll within the available viewport height.
 | Iterations per frame | Logistic steps computed each animation frame (state preserved between frames) |
 | Total frames | Number of frames to accumulate before stopping |
 | Horizontal scale | Magnify r relative to the current view (above 1×); keeps the current centre |
-| Brightness | Display gain (logarithmic); 1.0 matches the default look |
 | Colour | Density gradient from the style-guide palette |
+
+## Image panel
+
+- **Gallery:** thumbnails of approved screenshots saved to ScreenGrabber
+  (`GET /v1/shots?app_id=bifurcation`), fetched the first time the panel opens,
+  24 at a time with **Show more**. Clicking one restores that view (bounds,
+  brightness and palette from its saved URL) in place; modifier-click opens it in
+  a new tab. Old `?b=` brightness values in links still apply, though there is no
+  longer a brightness slider.
+- **Take screenshot:** see below.
+- **Resolution:** *Fit window* (default) renders at the window size × device pixel
+  ratio. Presets (720p, 1080p, 1440p, 4K, square, portrait) or a custom size
+  (16–4096 px per side) render at exactly that size, and the canvas is scaled to fit
+  the window and letterboxed, never stretched. The choice is stored in
+  `localStorage`, not in the URL.
 
 ## Screenshots
 
-The Image panel offers a single **Take screenshot** action, following
+The Image panel's **Take screenshot** action follows
 ScreenGrabber's `TAKE_SCREENSHOT_GUI.md`. It snapshots the current diagram
 (without overlays) and opens a **Take screenshot** dialog with a live preview,
 Brightness and Contrast sliders (50–150 %, with Reset) and an **Upload to

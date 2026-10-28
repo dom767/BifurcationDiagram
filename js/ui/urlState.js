@@ -18,10 +18,11 @@ function pair(text) {
 }
 
 /**
+ * @param {string} [search] query string to read; defaults to the page's own
  * @returns {{ bounds?: { rMin: number, rMax: number, xMin: number, xMax: number }, brightness?: number, paletteId?: string }}
  */
-export function readUrlState() {
-  const params = new URLSearchParams(location.search);
+export function readUrlState(search = location.search) {
+  const params = new URLSearchParams(search);
   const state = {};
   const r = pair(params.get("r"));
   const x = pair(params.get("x"));

@@ -29,21 +29,26 @@ export class Viewport {
     this.bindEvents();
   }
 
+  /** Backing-store size: the window size × DPR, or the fixed render resolution. */
   getCanvasSize() {
-    const rect = this.canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
     return {
-      width: Math.max(1, Math.floor(rect.width * dpr)),
-      height: Math.max(1, Math.floor(rect.height * dpr)),
+      width: Math.max(1, this.canvas.width),
+      height: Math.max(1, this.canvas.height),
     };
+  }
+
+  /** Canvas pixels per CSS pixel (not just DPR once a fixed resolution is scaled to fit). */
+  pixelScale() {
+    const rect = this.canvas.getBoundingClientRect();
+    return rect.width > 0 ? this.canvas.width / rect.width : window.devicePixelRatio || 1;
   }
 
   clientToCanvas(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const scale = this.pixelScale();
     return {
-      x: (clientX - rect.left) * dpr,
-      y: (clientY - rect.top) * dpr,
+      x: (clientX - rect.left) * scale,
+      y: (clientY - rect.top) * scale,
     };
   }
 
@@ -92,7 +97,7 @@ export class Viewport {
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    const dpr = window.devicePixelRatio || 1;
+    const scale = this.pixelScale();
     const { width, height } = this.getCanvasSize();
 
     if (this.pointers.size >= 2) {
@@ -114,8 +119,8 @@ export class Viewport {
     }
 
     if (this.isDragging) {
-      const dx = (e.clientX - this.lastPointer.x) * dpr;
-      const dy = (e.clientY - this.lastPointer.y) * dpr;
+      const dx = (e.clientX - this.lastPointer.x) * scale;
+      const dy = (e.clientY - this.lastPointer.y) * scale;
       this.camera.applyPan(dx, dy);
       this.lastPointer = { x: e.clientX, y: e.clientY };
       this.onInteract();

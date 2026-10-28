@@ -9,7 +9,10 @@ import { CursorReadout } from "./ui/cursorReadout.js";
 import { Camera } from "./math/camera.js";
 import { initScreenshots, snapshotCanvas } from "./ui/screenshots.js";
 import { readUrlState, writeUrlState } from "./ui/urlState.js";
+import { Gallery } from "./ui/gallery.js";
+import { ResolutionPicker } from "./ui/resolutionPicker.js";
 
+const appEl = /** @type {HTMLElement} */ (document.getElementById("app"));
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("view"));
 const overlay = /** @type {HTMLElement} */ (document.getElementById("overlay"));
 const statusEl = /** @type {HTMLElement} */ (document.getElementById("status"));
@@ -48,6 +51,8 @@ let minimap = null;
 let cursorReadout = null;
 /** @type {GPUCanvasContext | null} */
 let context = null;
+/** @type {SettingsPanel | null} */
+let settingsPanel = null;
 
 let refreshTimer = 0;
 let refreshGeneration = 0;
@@ -83,6 +88,28 @@ initScreenshots(() => {
     },
   };
 });
+
+const resolutionPicker = new ResolutionPicker({ onChange: () => resizeCanvas() });
+
+const gallery = new Gallery({ onOpen: openSavedView });
+document.getElementById("dock-image").addEventListener("click", () => gallery.ensureLoaded());
+
+/**
+ * Restore a gallery shot's view (bounds, brightness, palette) without reloading the page.
+ * @param {string} search
+ */
+function openSavedView(search) {
+  const state = readUrlState(search);
+  if (!state.bounds || !settingsPanel) return;
+  camera.setBounds(state.bounds);
+  settingsPanel.setDisplaySettings(state);
+  accumulationSettings = { ...accumulationSettings, ...settingsPanel.getSettings() };
+  minimap?.setDisplaySettings({
+    brightness: accumulationSettings.brightness,
+    paletteId: accumulationSettings.paletteId,
+  });
+  onReset();
+}
 
 function requestAccumulationRestart() {
   refreshGeneration++;
@@ -246,11 +273,34 @@ async function runAccumulationStep() {
   accumulation.busy = false;
 }
 
+/** Fit a fixed render resolution inside the window, letterboxed rather than stretched. */
+function layoutFixedCanvas(width, height) {
+  const box = appEl.getBoundingClientRect();
+  const scale = Math.min(box.width / width, box.height / height);
+  const cssWidth = `${width * scale}px`;
+  const cssHeight = `${height * scale}px`;
+  if (canvas.style.width !== cssWidth) canvas.style.width = cssWidth;
+  if (canvas.style.height !== cssHeight) canvas.style.height = cssHeight;
+  canvas.classList.add("is-fixed");
+}
+
 function resizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const width = Math.max(1, Math.floor(rect.width * dpr));
-  const height = Math.max(1, Math.floor(rect.height * dpr));
+  const target = resolutionPicker.getResolution();
+  let width;
+  let height;
+  if (target) {
+    ({ width, height } = target);
+    layoutFixedCanvas(width, height);
+  } else {
+    if (canvas.classList.contains("is-fixed")) {
+      canvas.classList.remove("is-fixed");
+      canvas.style.width = canvas.style.height = "";
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    width = Math.max(1, Math.floor(rect.width * dpr));
+    height = Math.max(1, Math.floor(rect.height * dpr));
+  }
   chrome.setResolution(width, height);
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
@@ -294,7 +344,7 @@ async function main() {
       () => viewport.getCanvasSize(),
       (clientX, clientY) => viewport.clientToCanvas(clientX, clientY)
     );
-    const settingsPanel = new SettingsPanel({ root: settingsEl, onChange: onSettingsChange });
+    settingsPanel = new SettingsPanel({ root: settingsEl, onChange: onSettingsChange });
 
     const urlState = readUrlState();
     if (urlState.bounds) camera.setBounds(urlState.bounds);

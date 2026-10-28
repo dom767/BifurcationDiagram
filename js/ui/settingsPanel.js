@@ -12,34 +12,6 @@ export const ACCUMULATION_DEFAULTS = {
   paletteId: DEFAULT_PALETTE_ID,
 };
 
-const BRIGHTNESS_MIN = 0.01;
-const BRIGHTNESS_MAX = 10;
-const BRIGHTNESS_LOG_MIN = Math.log10(BRIGHTNESS_MIN);
-const BRIGHTNESS_LOG_MAX = Math.log10(BRIGHTNESS_MAX);
-const BRIGHTNESS_SLIDER_STEPS = 1000;
-
-/** @param {number} slider */
-export function sliderToBrightness(slider) {
-  const t = slider / BRIGHTNESS_SLIDER_STEPS;
-  return 10 ** (BRIGHTNESS_LOG_MIN + t * (BRIGHTNESS_LOG_MAX - BRIGHTNESS_LOG_MIN));
-}
-
-/** @param {number} brightness */
-export function brightnessToSlider(brightness) {
-  const clamped = Math.min(BRIGHTNESS_MAX, Math.max(BRIGHTNESS_MIN, brightness));
-  const t = (Math.log10(clamped) - BRIGHTNESS_LOG_MIN) / (BRIGHTNESS_LOG_MAX - BRIGHTNESS_LOG_MIN);
-  return Math.round(t * BRIGHTNESS_SLIDER_STEPS);
-}
-
-/** @param {number} brightness */
-function formatBrightness(brightness) {
-  if (brightness >= 10) return brightness.toFixed(1);
-  if (brightness >= 1) return brightness.toFixed(2);
-  return brightness.toFixed(2);
-}
-
-export const BRIGHTNESS_SLIDER_DEFAULT = brightnessToSlider(ACCUMULATION_DEFAULTS.brightness);
-
 /**
  * DOM settings panel for accumulation controls.
  */
@@ -69,12 +41,8 @@ export class SettingsPanel {
     this.horizontalScaleOutput = /** @type {HTMLOutputElement} */ (
       root.querySelector("#horizontal-scale-value")
     );
-    this.brightnessInput = /** @type {HTMLInputElement} */ (
-      root.querySelector("#brightness")
-    );
-    this.brightnessOutput = /** @type {HTMLOutputElement} */ (
-      root.querySelector("#brightness-value")
-    );
+    // No control any more; kept so links (and gallery shots) with ?b= still restore their look.
+    this.brightness = ACCUMULATION_DEFAULTS.brightness;
     this.paletteSelect = /** @type {HTMLSelectElement} */ (
       root.querySelector("#colour-palette")
     );
@@ -88,7 +56,6 @@ export class SettingsPanel {
     this.iterationsInput.addEventListener("input", () => this.emitChange());
     this.totalFramesInput.addEventListener("input", () => this.emitChange());
     this.horizontalScaleInput.addEventListener("input", () => this.emitChange());
-    this.brightnessInput.addEventListener("input", () => this.emitChange());
     this.paletteSelect.addEventListener("change", () => this.emitChange());
     this.syncOutputs();
   }
@@ -110,7 +77,7 @@ export class SettingsPanel {
       iterationsPerFrame: Number(this.iterationsInput.value),
       totalFrames: Number(this.totalFramesInput.value),
       horizontalScale: Number(this.horizontalScaleInput.value),
-      brightness: sliderToBrightness(Number(this.brightnessInput.value)),
+      brightness: this.brightness,
       paletteId: this.paletteSelect.value,
     };
   }
@@ -119,9 +86,6 @@ export class SettingsPanel {
     this.iterationsOutput.textContent = this.iterationsInput.value;
     this.totalFramesOutput.textContent = this.totalFramesInput.value;
     this.horizontalScaleOutput.textContent = `${Number(this.horizontalScaleInput.value).toFixed(2)}×`;
-    this.brightnessOutput.textContent = formatBrightness(
-      sliderToBrightness(Number(this.brightnessInput.value))
-    );
   }
 
   /**
@@ -129,7 +93,7 @@ export class SettingsPanel {
    * @param {{ brightness?: number, paletteId?: string }} settings
    */
   setDisplaySettings({ brightness, paletteId }) {
-    if (brightness != null) this.brightnessInput.value = String(brightnessToSlider(brightness));
+    if (brightness != null) this.brightness = brightness;
     if (paletteId && PALETTES.some((p) => p.id === paletteId)) this.paletteSelect.value = paletteId;
     this.syncOutputs();
   }

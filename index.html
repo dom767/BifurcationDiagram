@@ -51,24 +51,34 @@
             </div>
             <p class="setting-hint">Relative stretch of the current view; above 1× magnifies horizontally.</p>
           </div>
-        </aside>
-        <aside class="sheet hidden" id="panel-image" aria-label="Image settings and screenshots" hidden>
-          <p class="eyebrow">Image</p>
-          <div class="setting">
-            <label class="setting-label" for="brightness">Brightness</label>
-            <div class="setting-row">
-              <input type="range" id="brightness" min="0" max="1000" step="1" value="667" />
-              <output class="setting-value" id="brightness-value" for="brightness">1.00</output>
-            </div>
-          </div>
           <div class="setting">
             <label class="setting-label" for="colour-palette">Colour</label>
             <div class="setting-row">
               <select id="colour-palette" class="setting-select" aria-label="Colour palette"></select>
             </div>
           </div>
+        </aside>
+        <aside class="sheet hidden" id="panel-image" aria-label="Gallery, screenshots and resolution" hidden>
+          <p class="eyebrow">Gallery</p>
+          <div class="gallery" id="gallery">
+            <ul class="gallery-grid" id="gallery-grid" aria-label="Saved screenshots"></ul>
+            <p class="gallery-status" id="gallery-status" role="status" aria-live="polite"></p>
+            <button type="button" class="gallery-more hidden" id="gallery-more" hidden>Show more</button>
+          </div>
           <div class="screenshot-controls" role="group" aria-label="Screenshot">
             <button type="button" id="screenshot-take" aria-haspopup="dialog" aria-controls="screenshot-panel" aria-expanded="false">Take screenshot</button>
+          </div>
+          <div class="setting setting-resolution">
+            <label class="setting-label" for="render-resolution">Resolution</label>
+            <div class="setting-row">
+              <select id="render-resolution" class="setting-select"></select>
+            </div>
+            <div class="setting-row resolution-custom hidden" id="resolution-custom" hidden>
+              <input type="number" id="resolution-width" class="setting-number" min="16" max="4096" step="1" value="1920" aria-label="Width in pixels" />
+              <span class="resolution-times" aria-hidden="true">×</span>
+              <input type="number" id="resolution-height" class="setting-number" min="16" max="4096" step="1" value="1080" aria-label="Height in pixels" />
+            </div>
+            <p class="setting-hint">Fixed sizes render at that resolution and are scaled to fit the window without stretching.</p>
           </div>
         </aside>
         <aside class="sheet sheet-info hidden" id="panel-info" aria-label="About this diagram" hidden>
