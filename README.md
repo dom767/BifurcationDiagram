@@ -16,19 +16,20 @@ No build step is required for development. The launcher downloads the static ser
 
 ## Production export
 
+AgentController repository commands (see [deploy.md](deploy.md)):
+
 ```powershell
 npm install
-.\Export-Static.ps1 -SkipUpload
+.\Build.cmd                 # local export only (no release claim, no upload)
+.\DeployLocal.cmd           # local export + serve Export/Version… (respects PORT)
+# .\DeployProd.cmd          # humans only: release + S3 upload + verify
 ```
 
-Creates `Export/VersionN/` with bundled JS/CSS, version-stamped `index.html`, and the WGSL shader. See [deploy.md](deploy.md) and [deploy_guide.md](deploy_guide.md).
+Or: `node actions\Build.mjs` / `node actions\DeployLocal.mjs`. Creates `Export/VersionN-localK/` (or `VersionN` on Deploy Prod) with bundled JS/CSS, version-stamped `index.html`, and the WGSL shader. See [deploy.md](deploy.md) and [deploy_guide.md](deploy_guide.md).
 
-```powershell
-# Export + upload to S3
-.\Export-Static.cmd
-```
+Legacy wrappers still work: `Export-Static.ps1 -SkipUpload` ≈ Build; `Export-Static.cmd` ≈ Deploy Prod.
 
-Smoke-test a build:
+Smoke-test a build (or use Deploy Local):
 
 ```powershell
 npx --yes serve Export/VersionN -p 8080

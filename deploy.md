@@ -38,9 +38,34 @@ into `js/vendor/baffled-screenshots.js` (`scripts/refresh-screengrabber-sdk.mjs`
 | S3 prefix | `bifurcation/` |
 | Public URL | `https://baffledcat.com/bifurcation/index.html` |
 
-Override with `-S3Bucket` / `-S3Prefix` on `Export-Static.ps1`.
+Override with `BIFURCATION_S3_BUCKET` / `BIFURCATION_S3_PREFIX`, or `-S3Bucket` / `-S3Prefix` on the older `Export-Static.ps1`.
 
-## Commands
+## Repository commands
+
+Standard AgentController actions (see AgentController `docs/RepositoryCommands.md`):
+
+| Action | What it does |
+|---|---|
+| **Build** (`actions/Build.mjs` / `Build.cmd`) | Local export only: `node export-static.mjs` (no `--release`, no upload) |
+| **Deploy Local** (`actions/DeployLocal.mjs` / `DeployLocal.cmd`) | Local export, then serve `Export/Version…` on `PORT` (default 8080) |
+| **Deploy Prod** (`actions/DeployProd.mjs` / `DeployProd.cmd`) | `export-static.mjs --release`, S3 upload, verify live asset version. **Humans only** |
+
+```powershell
+# Package only
+.\Build.cmd
+# or: node actions\Build.mjs
+
+# Package + serve the export locally
+.\DeployLocal.cmd
+# or: $env:PORT=7160; node actions\DeployLocal.mjs
+
+# Release + upload (humans / dashboard only — agents must never run this)
+.\DeployProd.cmd
+```
+
+Older entry points still work: `Export-Static.ps1 -SkipUpload` ≈ Build; `Export-Static.cmd` ≈ Deploy Prod.
+
+## Commands (legacy)
 
 ```powershell
 # Export + upload
@@ -56,7 +81,7 @@ npm run export
 
 ## Smoke-test checklist
 
-After export, serve the version folder locally:
+After export, serve the version folder locally (Deploy Local does this):
 
 ```powershell
 npx --yes serve Export/VersionN -p 8080
@@ -82,8 +107,12 @@ After upload (if used):
 
 | Script | Status |
 |---|---|
+| `actions/Build.mjs` | Implemented |
+| `actions/DeployLocal.mjs` | Implemented |
+| `actions/DeployProd.mjs` | Implemented (humans only) |
+| `Build.cmd` / `DeployLocal.cmd` / `DeployProd.cmd` | Thin wrappers |
 | `export-static.mjs` | Implemented |
-| `Export-Static.ps1` | Implemented |
-| `Export-Static.cmd` | Implemented |
+| `Export-Static.ps1` | Implemented (legacy; Deploy Prod mirrors it) |
+| `Export-Static.cmd` | Implemented (legacy) |
 | `Export/latest.json` | Written by packager |
-| S3 upload + verify | Implemented in `Export-Static.ps1` |
+| S3 upload + verify | Implemented in `actions/DeployProd.mjs` and `Export-Static.ps1` |
