@@ -1,17 +1,14 @@
 #!/usr/bin/env node
 // @ts-check
 /**
- * Build — local static export only (no upload, no release-number claim).
- * Runs `node export-static.mjs` → Export/Version<N>-local<k>.
- * See guidelines/repository-commands.md and deploy.md.
+ * Build — one unnumbered package in Export/Build<k> (no upload, no release-number claim).
+ * HTML keeps __VERSION__. Deploy Local and Deploy Prod stamp a copy of this package; neither rebuilds.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-process.chdir(root);
+import { newBuildDir, root, writeLatest } from "./lib/build.mjs";
+import { sourceOf } from "../scripts/release-version.mjs";
 
 /**
  * @param {string} command
@@ -34,9 +31,19 @@ function run(command, args, opts = {}) {
 
 if (!fs.existsSync(path.join(root, "node_modules"))) {
   console.log("Installing dev dependencies…");
-  run("npm", ["install"], { shell: true });
+  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  run(npm, ["install"]);
 }
 
-console.log("Build: node export-static.mjs (local, no --release)");
-run(process.execPath, [path.join(root, "export-static.mjs")]);
-process.exit(0);
+const { packageInto } = await import("../export-static.mjs");
+const { build, dir } = newBuildDir();
+console.log(`Build: packaging into Export/Build${build}`);
+try {
+  await packageInto(dir);
+  const manifest = writeLatest({ build, dir, source: sourceOf(root) });
+  console.log(`Build ${manifest.build} ready in ${manifest.dir}.`);
+} catch (err) {
+  fs.rmSync(dir, { recursive: true, force: true });
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+}

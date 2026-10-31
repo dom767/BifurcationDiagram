@@ -4,36 +4,29 @@ Interactive viewer for the classic bifurcation diagram of the logistic map. Accu
 
 ## Quick start
 
-Double-click `StartServer.cmd` (requires [Node.js LTS](https://nodejs.org/)), or run:
+Double-click `StartServer.cmd`, or `RunDev.cmd` (same server, in its own window). Both need [Node.js LTS](https://nodejs.org/).
 
 ```powershell
 .\StartServer.cmd
+# or: .\RunDev.cmd
 ```
 
 Open [http://localhost:8080](http://localhost:8080) in a WebGPU-capable browser (Chrome or Edge 113+).
 
 No build step is required for development. The launcher downloads the static server through npx when needed. Set `PORT` to use another port. Close the server window or press Ctrl+C to stop.
 
-## Production export
+## Repository commands
 
-AgentController repository commands (see [deploy.md](deploy.md)):
-
-```powershell
-npm install
-.\Build.cmd                 # local export only (no release claim, no upload)
-.\DeployLocal.cmd           # local export + serve Export/Version… (respects PORT)
-# .\DeployProd.cmd          # humans only: release + S3 upload + verify
-```
-
-Or: `node actions\Build.mjs` / `node actions\DeployLocal.mjs`. Creates `Export/VersionN-localK/` (or `VersionN` on Deploy Prod) with bundled JS/CSS, version-stamped `index.html`, and the WGSL shader. See [deploy.md](deploy.md) and [deploy_guide.md](deploy_guide.md).
-
-Legacy wrappers still work: `Export-Static.ps1 -SkipUpload` ≈ Build; `Export-Static.cmd` ≈ Deploy Prod.
-
-Smoke-test a build (or use Deploy Local):
+Build once, then deploy that build (see [deploy.md](deploy.md)):
 
 ```powershell
-npx --yes serve Export/VersionN -p 8080
+.\RunDev.cmd        # working tree, no build; own window
+.\Build.cmd         # Export/Build<k> with __VERSION__ left in the HTML
+.\DeployLocal.cmd   # stamp b<k>-local into a copy and serve it; own window
+# .\DeployProd.cmd  # humans only: claim VERSION, stamp Export/VersionN, upload
 ```
+
+Deploy Local and Deploy Prod never rebuild. They fail with "run Build first" when there is no build. `PORT` overrides the default 8080.
 
 ## What it shows
 
@@ -110,7 +103,7 @@ Server setup still requires the ScreenGrabber administrator to:
 
 ScreenGrabber doesn't push its SDK to this app: the app pulls it. The SDK is
 vendored from ScreenGrabber; see `js/vendor/README.md` for its pinned revision.
-Every export first re-downloads it from ScreenGrabber's `master` and fails if it
+Every build first re-downloads it from ScreenGrabber's `master` and fails if it
 can't (see [deploy.md](deploy.md)), then bundles it through `js/main.js`.
 Without the site key, upload reports a configuration message and local downloads
 remain available. Network, CORS and verification failures are shown in the panel

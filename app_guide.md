@@ -147,7 +147,7 @@ Authoritative rendering detail belongs in **`rendering.md`** per project, not in
 ### Snapshot model
 
 - **Production never calls live APIs.** Fetch upstream data in Node scripts (`scripts/fetch-*.mjs`), write JSON to `data/`, commit or regenerate before export.
-- Separate **`npm run fetch-data`** from **`npm run export-static`**. A flaky TAP/API must not block a release build.
+- Separate **`npm run fetch-data`** from **Build**. A flaky TAP/API must not block a release build.
 
 ### Loader contract
 
@@ -175,16 +175,14 @@ Authoritative rendering detail belongs in **`rendering.md`** per project, not in
 ## Development workflow
 
 ```bash
-# Daily dev — no build step
+# Daily dev — no build step (StartServer.cmd / RunDev.cmd)
 npx serve -p 8080
-# or python -m http.server 8080
 
 # Refresh upstream snapshots (optional, network)
 npm run fetch-data
 
-# Release folder
-npm run export-static
-# Windows: Export-Static.cmd
+# Package once, then deploy that package (Windows: Build.cmd, DeployLocal.cmd, DeployProd.cmd)
+node actions/Build.mjs
 ```
 
 - **`Start.cmd` / `Stop.cmd`** optional for local server; never ship them.
@@ -197,7 +195,7 @@ npm run export-static
 
 Follow **[deploy_guide.md](deploy_guide.md)**:
 
-- `Export/VersionN` incrementing folders.
+- `Export/Build<k>` packages, stamped into `Export/VersionN` only by Deploy Prod.
 - `Export/latest.json` manifest.
 - esbuild ESM bundle, HTML rewrite, gzip data.
 - S3 sync with long cache on assets, short cache on `index.html`.
@@ -232,7 +230,7 @@ Do not duplicate rendering formulas in README; link to `rendering.md`.
 - [ ] Loader supports dev JSON and production gzip + version stamp
 - [ ] style_guide tokens used (or documented divergence)
 - [ ] `prefers-reduced-motion` respected
-- [ ] `export-static.mjs` + `Export-Static.ps1` wired per deploy_guide
+- [ ] Run Dev, Build, Deploy Local and Deploy Prod wired per deploy_guide
 - [ ] `deploy.md` lists public URL, smoke tests, and app-specific globals
 - [ ] Optional `rendering.md` if the visual output is non-obvious
 

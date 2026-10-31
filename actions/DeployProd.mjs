@@ -1,53 +1,50 @@
 #!/usr/bin/env node
 // @ts-check
 /**
- * Deploy Prod — claim VERSION, export with --release, upload to S3, verify live stamp.
+ * Deploy Prod — ship the latest Build: claim VERSION, stamp it into Export/VersionN, upload,
+ * verify the live asset version. It never rebuilds, so what goes live is what Deploy Local served.
  * Humans only (dashboard confirms). Agents must never run this.
- * Mirrors Export-Static.ps1 upload/verify; may call existing scripts until fully Node.
- * See guidelines/repository-commands.md and deploy.md.
  */
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-process.chdir(root);
+import { describe, exportRoot, highestRelease, latestBuild, root, stampCopy } from "./lib/build.mjs";
+import { claimVersion } from "../scripts/release-version.mjs";
 
 const ASSET_VERSION_GLOBAL = "__BIFURCATION_DIAGRAM_ASSET_VERSION__";
-const defaultBucket = process.env.BIFURCATION_S3_BUCKET ?? "baffledcat.com";
-const defaultPrefix = process.env.BIFURCATION_S3_PREFIX ?? "bifurcation/";
+const bucket = process.env.BIFURCATION_S3_BUCKET ?? "baffledcat.com";
+let prefix = process.env.BIFURCATION_S3_PREFIX ?? "bifurcation/";
+if (!prefix.endsWith("/")) prefix += "/";
 
 /**
  * @param {string} command
  * @param {string[]} args
- * @param {{ shell?: boolean, capture?: boolean }} [opts]
  */
-function run(command, args, opts = {}) {
+function run(command, args) {
+  console.log([command, ...args].join(" "));
   const r = spawnSync(command, args, {
-    stdio: opts.capture ? ["ignore", "pipe", "pipe"] : "inherit",
+    stdio: "inherit",
     cwd: root,
-    shell: opts.shell ?? false,
     env: process.env,
-    encoding: opts.capture ? "utf8" : undefined,
   });
   if (r.error) {
     console.error(r.error.message);
     process.exit(1);
   }
-  if (r.status !== 0) {
-    if (opts.capture && r.stderr) process.stderr.write(String(r.stderr));
-    process.exit(r.status ?? 1);
-  }
+  if (r.status !== 0) process.exit(r.status ?? 1);
   return r;
+}
+
+/** @returns {string} */
+function awsBin() {
+  return process.platform === "win32" ? "aws.cmd" : "aws";
 }
 
 /** @returns {boolean} */
 function awsIdentityOk() {
-  const r = spawnSync("aws", ["sts", "get-caller-identity"], {
+  const r = spawnSync(awsBin(), ["sts", "get-caller-identity"], {
     stdio: "ignore",
     cwd: root,
-    shell: true,
+    shell: false,
     env: process.env,
   });
   return r.status === 0;
@@ -56,7 +53,7 @@ function awsIdentityOk() {
 function ensureAwsAuth() {
   if (awsIdentityOk()) return;
   console.log("AWS credentials not found. Running aws login…");
-  run("aws", ["login"], { shell: true });
+  run(awsBin(), ["login"]);
   if (!awsIdentityOk()) {
     console.error("AWS authentication still failed after aws login.");
     process.exit(1);
@@ -79,102 +76,79 @@ async function verifyRemoteVersion(publicUrl, expectedVersion) {
   }
 }
 
-if (!fs.existsSync(path.join(root, "node_modules"))) {
-  console.log("Installing dev dependencies…");
-  run("npm", ["install"], { shell: true });
-}
-
-console.log("Deploy Prod: node export-static.mjs --release");
-run(process.execPath, [path.join(root, "export-static.mjs"), "--release"]);
-
-const manifestPath = path.join(root, "Export", "latest.json");
-if (!fs.existsSync(manifestPath)) {
-  console.error("Missing Export/latest.json — export did not complete.");
-  process.exit(1);
-}
-
-/** @type {{ version: string, dir: string, bucket?: string, prefix?: string }} */
-const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-const version = String(manifest.version);
-const outDir = path.join(root, manifest.dir.replace(/\//g, path.sep));
-if (!fs.existsSync(outDir)) {
-  console.error(`Export directory not found: ${outDir}`);
-  process.exit(1);
-}
-
-const bucket = manifest.bucket || defaultBucket;
-let prefix = manifest.prefix || defaultPrefix;
-if (!prefix.endsWith("/")) prefix += "/";
-const s3Base = `s3://${bucket}/${prefix}`;
-
-console.log(`\nExport ${version} ready at ${manifest.dir}`);
-ensureAwsAuth();
-
-console.log(`\nUploading to ${s3Base}`);
-
-run(
-  "aws",
-  [
-    "s3",
-    "sync",
-    outDir,
-    s3Base,
-    "--delete",
-    "--exclude",
-    "index.html",
-    "--exclude",
-    "*.json.gz",
-    "--cache-control",
-    "public, max-age=31536000, immutable",
-  ],
-  { shell: true }
-);
-
-run(
-  "aws",
-  [
-    "s3",
-    "sync",
-    outDir,
-    s3Base,
-    "--exclude",
-    "*",
-    "--include",
-    "*.json.gz",
-    "--content-type",
-    "application/gzip",
-    "--cache-control",
-    "public, max-age=31536000, immutable",
-  ],
-  { shell: true }
-);
-
-run(
-  "aws",
-  [
-    "s3",
-    "cp",
-    path.join(outDir, "index.html"),
-    `${s3Base}index.html`,
-    "--cache-control",
-    "public, max-age=60",
-    "--content-type",
-    "text/html; charset=utf-8",
-  ],
-  { shell: true }
-);
-
-const publicUrl = bucket.includes(".")
-  ? `https://${bucket}/${prefix}index.html`
-  : `https://${bucket}.s3.amazonaws.com/${prefix}index.html`;
-
-console.log(`Verifying remote version at ${publicUrl}`);
 try {
+  const build = latestBuild();
+  console.log(`Deploy Prod: ${describe(build)}`);
+  if (build.source?.uncommittedChanges) {
+    console.warn("Warning: this build has uncommitted changes in it.");
+  }
+
+  const n = claimVersion(root, { floor: highestRelease() });
+  const version = String(n);
+  const dir = stampCopy(build.dir, path.join(exportRoot, `Version${n}`), version);
+  const s3Base = `s3://${bucket}/${prefix}`;
+
+  console.log(`\nStamped ${version} into ${path.relative(root, dir).split(path.sep).join("/")}`);
+  ensureAwsAuth();
+  console.log(`\nUploading to ${s3Base}`);
+
+  run(
+    awsBin(),
+    [
+      "s3",
+      "sync",
+      dir,
+      s3Base,
+      "--delete",
+      "--exclude",
+      "index.html",
+      "--exclude",
+      "*.json.gz",
+      "--cache-control",
+      "public, max-age=31536000, immutable",
+    ],
+  );
+
+  run(
+    awsBin(),
+    [
+      "s3",
+      "sync",
+      dir,
+      s3Base,
+      "--exclude",
+      "*",
+      "--include",
+      "*.json.gz",
+      "--content-type",
+      "application/gzip",
+      "--cache-control",
+      "public, max-age=31536000, immutable",
+    ],
+  );
+
+  run(
+    awsBin(),
+    [
+      "s3",
+      "cp",
+      path.join(dir, "index.html"),
+      `${s3Base}index.html`,
+      "--cache-control",
+      "public, max-age=60",
+      "--content-type",
+      "text/html; charset=utf-8",
+    ],
+  );
+
+  const publicUrl = bucket.includes(".")
+    ? `https://${bucket}/${prefix}index.html`
+    : `https://${bucket}.s3.amazonaws.com/${prefix}index.html`;
+
+  console.log(`Verifying remote version at ${publicUrl}`);
   await verifyRemoteVersion(publicUrl, version);
+  console.log(`\nUpload complete. Version ${version} verified.`);
 } catch (err) {
   console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 }
-
-console.log(`\nUpload complete. Version ${version} verified.`);
-process.exit(0);

@@ -9,7 +9,7 @@ Each project keeps its own `deploy.md` (or README section) for app-specific path
 ## Goals
 
 - Ship a **self-contained static folder** — no dev server, no `node_modules`, no fetch scripts at runtime.
-- Keep every export in an **incrementing version folder** (`Export/Version1`, `Version2`, …) for diffing, rollback, and re-upload.
+- Keep every build in its **own folder** (`Export/Build1`, `Build2`, …) and every release in `Export/VersionN`. Deploys copy a build and only replace `__VERSION__` in its HTML.
 - **Bundle** ES-module JS (and minify CSS where applicable); do not concatenate modules as globals.
 - **Version-stamp** assets with `?v=N` so long-lived cache headers are safe.
 - **Separate data refresh from packaging** when the app depends on fetched snapshots (catalogs, manifests, etc.).
@@ -23,10 +23,11 @@ Each project keeps its own `deploy.md` (or README section) for app-specific path
 | Item | Convention |
 | --- | --- |
 | Export root | `Export/` at project root (gitignored) |
-| Version folders | `Version1`, `Version2`, … (no zero-padding) for releases; `Version<N>-local<k>` for local builds |
-| Release number | Kept on GitHub in `VERSION` (the last release). A release (`export-static.mjs --release`, which `Export-Static.ps1` uses when uploading) claims the next number by committing and pushing only `VERSION` (`scripts/release-version.mjs`), so every machine shares one chain of numbers |
-| Local builds | `export-static.mjs` without `--release` (or `Export-Static.ps1 -SkipUpload`) builds `Version<N>-local<k>`, N being the next release; it doesn't use up a number |
-| Manifest | `Export/latest.json` written by the packager after a successful build |
+| Build folders | `Build1`, `Build2`, … from **Build**, with `__VERSION__` still in the HTML |
+| Release folders | `Version1`, `Version2`, … stamped by **Deploy Prod** from the latest build |
+| Local copies | `Build<k>-local`, stamped `b<k>-local` by **Deploy Local** (replaced each time) |
+| Release number | Kept on GitHub in `VERSION`. **Deploy Prod** claims the next number (`scripts/release-version.mjs`) before stamping. Build and Deploy Local do not use one up |
+| Manifest | `Export/latest.json`: `{ "build", "dir", "builtAt", "source" }` written by Build |
 | Public URL | `https://<bucket>/<prefix>/index.html` — prefix must match where users browse |
 
 Do not mutate an old version folder in place. Always create the next number. Never pick a release number from the folders on your machine: other machines release too.
@@ -37,13 +38,14 @@ After a successful export, write:
 
 ```json
 {
-  "version": 29,
-  "dir": "Export/Version29",
-  "exportedAt": "2026-08-28T08:08:22.257Z"
+  "build": 12,
+  "dir": "Export/Build12",
+  "builtAt": "2026-08-28T08:08:22.257Z",
+  "source": { "commit": "abc1234", "uncommittedChanges": false }
 }
 ```
 
-The upload wrapper reads this manifest so it uploads **the build that just finished**, not merely “the highest folder on disk”.
+Deploy Local and Deploy Prod read this manifest. They deploy **that build**, and they never rebuild.
 
 ---
 
@@ -57,7 +59,7 @@ Source tree
    Vendored shared libraries (ScreenGrabber SDK) ARE refreshed here; export fails if that fails
     │
     ▼
-2. Choose next Export/VersionN
+2. Take the next Export/Build<k> and leave __VERSION__ in the HTML
     │
     ▼
 3. Bundle JS entry → app.bundle.min.js (esbuild / Rollup / Vite)
@@ -69,7 +71,7 @@ Source tree
 5. Copy or gzip runtime data assets into the export folder
     │
     ▼
-6. Rewrite index.html for production (?v=N, bundle paths, asset-version global)
+6. Rewrite index.html for production (?v=__VERSION__, bundle paths, asset-version global)
     │
     ▼
 7. Write Export/latest.json
@@ -78,7 +80,7 @@ Source tree
 8. Smoke-test locally
     │
     ▼
-9. (Optional) Upload Export/VersionN to hosting + verify remote version
+9. Deploy Prod claims VERSION, stamps Export/VersionN, uploads that folder, verifies the live stamp
 ```
 
 ---
@@ -95,12 +97,12 @@ Typical dev `index.html`:
 Production rewrite (version `N`):
 
 ```html
-<link rel="stylesheet" href="app.bundle.min.css?v=N" />
-<script>self.__APP_ASSET_VERSION__ = "N";</script>
-<script type="module" src="app.bundle.min.js?v=N"></script>
+<link rel="stylesheet" href="app.bundle.min.css?v=__VERSION__" />
+<script>self.__APP_ASSET_VERSION__ = "__VERSION__";</script>
+<script type="module" src="app.bundle.min.js?v=__VERSION__"></script>
 ```
 
-Replace `__APP_ASSET_VERSION__` with a project-specific global name (e.g. `__PLANETVIEWER_ASSET_VERSION__`). The loader uses it to append `?v=N` to runtime fetches.
+Replace `__APP_ASSET_VERSION__` with a project-specific global name (e.g. `__BIFURCATION_DIAGRAM_ASSET_VERSION__`). The loader reads that global and appends `?v=` to runtime fetches. A deploy replaces `__VERSION__` in the HTML only.
 
 Use **page-relative paths** (no leading `/`) so the app works at a subpath such as `/myapp/`.
 
@@ -110,7 +112,7 @@ Use **page-relative paths** (no leading `/`) so the app works at a subpath such 
 
 - **Entry:** project’s main module (e.g. `js/main.js`).
 - **Format:** `esm`, `bundle: true`, `minify: true`.
-- **Output:** `Export/VersionN/app.bundle.min.js`.
+- **Output:** `app.bundle.min.js` in the build folder (`Export/Build<k>`).
 - **Fail hard** if bundling fails — do not ship an incomplete export.
 
 Keep large runtime data **external** (fetched at load time) unless you intentionally want a single huge bundle. Do not inline multi‑MB JSON via the bundler’s JSON loader unless that is a deliberate trade-off.
@@ -163,7 +165,7 @@ If using gzip in production:
 | Dev server scripts (`Start.cmd`, etc.) | Local only |
 | Fetch / import scripts | Authoring, not runtime |
 | `Export/` itself | Never nest exports |
-| Packaging sources (`export-static.*`, `Export-Static.*`) | Not runtime |
+| Packaging sources (`export-static.mjs`, `actions/`) | Not runtime |
 | Docs, VCS, editor config | Not runtime |
 
 Adjust per project; document extras in that project’s `deploy.md`.
@@ -172,7 +174,7 @@ Adjust per project; document extras in that project’s `deploy.md`.
 
 ## Upload (S3)
 
-Upload **only** the latest `Export/VersionN` folder (not the whole `Export/` tree).
+Upload **only** the stamped `Export/VersionN` folder (not the whole `Export/` tree, and not the unstamped build).
 
 Default parameters (override per project):
 
@@ -180,7 +182,6 @@ Default parameters (override per project):
 | --- | --- |
 | Bucket | `baffledcat.com` |
 | Prefix | `myapp/` (must match the public URL path) |
-| Skip flag | `-SkipUpload` |
 
 ### Cache headers
 
@@ -233,12 +234,14 @@ myapp/
   css/app.css
   js/main.js                 # or other entry
   data/                      # optional runtime snapshots
-  export-static.mjs          # Node packager
-  Export-Static.ps1          # Windows: export + optional upload
-  Export-Static.cmd          # double-click entry → .ps1
+  actions/Build.mjs          # package into Export/Build<k>
+  actions/DeployLocal.mjs    # stamp b<k>-local and serve
+  actions/DeployProd.mjs     # claim, stamp VersionN, upload
+  actions/RunDev.mjs         # serve the working tree
+  export-static.mjs          # packager used by Build
   Export/                    # generated; gitignored
     latest.json
-    Version1/
+    Build1/
     VersionN/
   deploy.md                  # project-specific notes (optional)
   deploy_guide.md            # this file (copy into each repo, or symlink)
@@ -249,25 +252,20 @@ myapp/
 ## Commands (target UX)
 
 ```powershell
-# Full export + upload
-.\Export-Static.cmd
-
-# Export only
-.\Export-Static.ps1 -SkipUpload
-
-# Custom destination
-.\Export-Static.ps1 -S3Bucket "example.com" -S3Prefix "myapp/"
-
-# Packager only
-node export-static.mjs
+.\RunDev.cmd          # working tree, no build
+.\Build.cmd           # Export/Build<k>, __VERSION__ left in the HTML
+.\DeployLocal.cmd     # stamp b<k>-local and serve that copy
+.\DeployProd.cmd      # humans only: claim VERSION, stamp, upload, verify
 ```
 
-Print the exact `aws s3` commands at the end of every export (even with `-SkipUpload`) for audit and manual runs.
+Deploy Prod prints the `aws s3` commands it runs. Bucket and prefix come from the environment (`BIFURCATION_S3_BUCKET`, `BIFURCATION_S3_PREFIX`) when set.
 
 ### Local smoke-test
 
+Deploy Local serves `Export/Build<k>-local`. Or:
+
 ```powershell
-npx --yes serve Export/VersionN -p 8080
+npx --yes serve Export/Build1-local -p 8080
 ```
 
 Open `http://localhost:8080`. Use HTTPS or localhost for APIs that require a secure context.
@@ -277,7 +275,7 @@ Open `http://localhost:8080`. Use HTTPS or localhost for APIs that require a sec
 ## Export checklist (generic)
 
 - [ ] Fetched data (if any) is the snapshot you intend to ship
-- [ ] New `Export/VersionN` created; `Export/latest.json` updated
+- [ ] New `Export/Build<k>` created with `__VERSION__` in the HTML only; `Export/latest.json` updated
 - [ ] No source trees / dev tooling in the version folder
 - [ ] `index.html` references production bundles, not dev paths
 - [ ] `?v=N` on JS/CSS (and runtime fetches that use the version global)

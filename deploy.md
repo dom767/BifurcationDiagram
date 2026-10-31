@@ -17,12 +17,13 @@ No runtime JSON catalog. No separate data refresh step before export.
 
 ## ScreenGrabber SDK refresh
 
-Every export (local or release) first pulls the ScreenGrabber SDK from
+Every **Build** first pulls the ScreenGrabber SDK from
 `https://raw.githubusercontent.com/dom767/ScreenGrabber/master/sdk/baffled-screenshots.js`
 into `js/vendor/baffled-screenshots.js` (`scripts/refresh-screengrabber-sdk.mjs`, called by
-`export-static.mjs` before a release number is claimed or anything is bundled).
+`export-static.mjs` before anything is bundled). Deploy Local and Deploy Prod do not refresh it:
+they ship the package Build already made.
 
-- The export **fails** if the download errors, times out, returns anything but HTTP 200, or
+- The build **fails** if the download errors, times out, returns anything but HTTP 200, or
   returns an empty body or one without `createBaffledScreenshots`. There is no offline fallback:
   a stale SDK is never packaged silently.
 - The file is only rewritten when upstream differs (ignoring line endings and the provenance
@@ -38,56 +39,34 @@ into `js/vendor/baffled-screenshots.js` (`scripts/refresh-screengrabber-sdk.mjs`
 | S3 prefix | `bifurcation/` |
 | Public URL | `https://baffledcat.com/bifurcation/index.html` |
 
-Override with `BIFURCATION_S3_BUCKET` / `BIFURCATION_S3_PREFIX`, or `-S3Bucket` / `-S3Prefix` on the older `Export-Static.ps1`.
+Override with `BIFURCATION_S3_BUCKET` / `BIFURCATION_S3_PREFIX`.
 
 ## Repository commands
 
-Standard AgentController actions (see AgentController `docs/RepositoryCommands.md`):
+Build once, deploy that build. Helpers live in `actions/lib/build.mjs`.
 
 | Action | What it does |
 |---|---|
-| **Build** (`actions/Build.mjs` / `Build.cmd`) | Local export only: `node export-static.mjs` (no `--release`, no upload) |
-| **Deploy Local** (`actions/DeployLocal.mjs` / `DeployLocal.cmd`) | Local export, then serve `Export/Version…` on `PORT` (default 8080) |
-| **Deploy Prod** (`actions/DeployProd.mjs` / `DeployProd.cmd`) | `export-static.mjs --release`, S3 upload, verify live asset version. **Humans only** |
+| **Run Dev** (`actions/RunDev.mjs` / `RunDev.cmd`) | Opens `StartServer.cmd` in its own window. Serves the working tree. No build. |
+| **Build** (`actions/Build.mjs` / `Build.cmd`) | The only packager. Writes `Export/Build<k>` with `?v=__VERSION__` and `self.__BIFURCATION_DIAGRAM_ASSET_VERSION__ = "__VERSION__"`, and records it in `Export/latest.json`. No `VERSION` claim, no upload. |
+| **Deploy Local** (`actions/DeployLocal.mjs` / `DeployLocal.cmd`) | Takes the latest build, stamps `b<k>-local` into `Export/Build<k>-local`, and serves that copy on `PORT` (default 8080) in its own window. Never rebuilds. |
+| **Deploy Prod** (`actions/DeployProd.mjs` / `DeployProd.cmd`) | Takes the latest build, claims `VERSION`, stamps it into `Export/VersionN`, uploads `bifurcation/` and checks the live asset version. Never rebuilds. **Humans only.** |
+
+Both deploys fail with "run Build first" when there is no build, and start their log with which build and commit they are deploying.
 
 ```powershell
-# Package only
+.\RunDev.cmd
 .\Build.cmd
-# or: node actions\Build.mjs
-
-# Package + serve the export locally
 .\DeployLocal.cmd
-# or: $env:PORT=7160; node actions\DeployLocal.mjs
-
-# Release + upload (humans / dashboard only — agents must never run this)
-.\DeployProd.cmd
+# $env:PORT=7140; node actions\DeployLocal.mjs
+# .\DeployProd.cmd   # humans / dashboard only
 ```
 
-Older entry points still work: `Export-Static.ps1 -SkipUpload` ≈ Build; `Export-Static.cmd` ≈ Deploy Prod.
-
-## Commands (legacy)
-
-```powershell
-# Export + upload
-.\Export-Static.cmd
-
-# Export only
-.\Export-Static.ps1 -SkipUpload
-
-# Packager only
-npm install
-npm run export
-```
+`npm run export` is Build. `Export-Static.ps1` and `Export-Static.cmd` are removed.
 
 ## Smoke-test checklist
 
-After export, serve the version folder locally (Deploy Local does this):
-
-```powershell
-npx --yes serve Export/VersionN -p 8080
-```
-
-Open `http://localhost:8080` and confirm:
+Deploy Local serves the stamped copy. Open `http://127.0.0.1:8080` (or `PORT`) and confirm the page contains `b<k>-local` and not `__VERSION__`. Then:
 
 - [ ] Diagram accumulates and reaches ready state
 - [ ] Pan, scroll zoom, and double-click reset work
@@ -100,19 +79,20 @@ Open `http://localhost:8080` and confirm:
 After upload (if used):
 
 - [ ] Remote `index.html` contains `self.__BIFURCATION_DIAGRAM_ASSET_VERSION__ = "N"`
-- [ ] Version matches `Export/latest.json`
+- [ ] `N` is the number Deploy Prod claimed (`Export/VersionN`), not the build folder
 - [ ] Hosted URL is HTTPS
 
 ## Implementation status
 
 | Script | Status |
 |---|---|
-| `actions/Build.mjs` | Implemented |
-| `actions/DeployLocal.mjs` | Implemented |
-| `actions/DeployProd.mjs` | Implemented (humans only) |
-| `Build.cmd` / `DeployLocal.cmd` / `DeployProd.cmd` | Thin wrappers |
-| `export-static.mjs` | Implemented |
-| `Export-Static.ps1` | Implemented (legacy; Deploy Prod mirrors it) |
-| `Export-Static.cmd` | Implemented (legacy) |
-| `Export/latest.json` | Written by packager |
-| S3 upload + verify | Implemented in `actions/DeployProd.mjs` and `Export-Static.ps1` |
+| `actions/RunDev.mjs` | Implemented (opens `StartServer.cmd`) |
+| `actions/Build.mjs` | Implemented (`Export/Build<k>`, placeholder version) |
+| `actions/DeployLocal.mjs` | Implemented (stamp + serve, no rebuild) |
+| `actions/DeployProd.mjs` | Implemented (claim, stamp, upload, verify; humans only) |
+| `actions/lib/build.mjs` | Shared helpers |
+| `RunDev.cmd` / `Build.cmd` / `DeployLocal.cmd` / `DeployProd.cmd` | Thin wrappers |
+| `export-static.mjs` | Packager used by Build (`packageInto`); not a release entry point |
+| `StartServer.cmd` | Dev server (`%PORT%` or 8080) |
+| `Export/latest.json` | Written by Build |
+| S3 upload + verify | `actions/DeployProd.mjs` only |

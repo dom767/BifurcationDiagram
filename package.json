@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "export": "node export-static.mjs"
+    "export": "node actions/Build.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
