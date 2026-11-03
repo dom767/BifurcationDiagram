@@ -100,9 +100,11 @@ function download(blob) {
 
 function readUploadPref() {
   try {
-    return localStorage.getItem(UPLOAD_PREF_KEY) === "1";
+    const stored = localStorage.getItem(UPLOAD_PREF_KEY);
+    if (stored === null) return true;
+    return stored === "1";
   } catch {
-    return false;
+    return true;
   }
 }
 
