@@ -17,19 +17,12 @@ No runtime JSON catalog. No separate data refresh step before export.
 
 ## ScreenGrabber SDK refresh
 
-Every **Build** first pulls the ScreenGrabber SDK from
+Each deploy refreshes the ScreenGrabber SDK from
 `https://raw.githubusercontent.com/dom767/ScreenGrabber/master/sdk/baffled-screenshots.js`
-into `js/vendor/baffled-screenshots.js` (`scripts/refresh-screengrabber-sdk.mjs`, called by
-`export-static.mjs` before anything is bundled). Deploy Local and Deploy Prod do not refresh it:
-they ship the package Build already made.
-
-- The build **fails** if the download errors, times out, returns anything but HTTP 200, or
-  returns an empty body or one without `createBaffledScreenshots`. There is no offline fallback:
-  a stale SDK is never packaged silently.
-- The file is only rewritten when upstream differs (ignoring line endings and the provenance
-  header). Its header then records the ScreenGrabber commit. Commit the refreshed file.
-- The checked-in copy stays the one used for source development, so the app runs from source
-  without network access.
+through `scripts/refresh-screengrabber-sdk.mjs` before bundling. Download failures
+abort packaging. If the SDK changes, packaging stops: commit the refreshed file
+and rerun the deploy so the manifest names the actual source. Source development
+uses the checked-in SDK without requiring network access.
 
 ## Default hosting
 
@@ -43,56 +36,53 @@ Override with `BIFURCATION_S3_BUCKET` / `BIFURCATION_S3_PREFIX`.
 
 ## Repository commands
 
-Build once, deploy that build. Helpers live in `actions/lib/build.mjs`.
+Both deploys package independently through `packageBuild({ dir, version })` in
+`actions/lib/build.mjs`. Install dev dependencies with `npm ci` first.
 
 | Action | What it does |
 |---|---|
-| **Run Dev** (`actions/RunDev.mjs` / `RunDev.cmd`) | Opens `StartServer.cmd` in its own window. Serves the working tree. No build. |
-| **Build** (`actions/Build.mjs` / `Build.cmd`) | The only packager. Writes `Export/Build<k>` with `?v=__VERSION__` and `self.__BIFURCATION_DIAGRAM_ASSET_VERSION__ = "__VERSION__"`, and records it in `Export/latest.json`. No `VERSION` claim, no upload. |
-| **Deploy Local** (`actions/DeployLocal.mjs` / `DeployLocal.cmd`) | Takes the latest build, stamps `b<k>-local` into `Export/Build<k>-local`, and serves that copy on `PORT` (default 8080) in its own window. Never rebuilds. |
-| **Deploy Prod** (`actions/DeployProd.mjs` / `DeployProd.cmd`) | Takes the latest build, claims `VERSION`, stamps it into `Export/VersionN`, uploads `bifurcation/` and checks the live asset version. Never rebuilds. **Humans only.** |
+| **Run Local** (`RunLocal.cmd`) | Opens `StartServer.cmd` in its own window, serving the working tree. |
+| **Deploy Local** (`DeployLocal.cmd`) | Packages `Export/Local` as `0.0.C`, replaces that local folder, and serves it in its own window. |
+| **Deploy Prod** (`DeployProd.cmd`) | Claims N, packages `Export/VersionN` as `0.N.C`, uploads assets first and HTML last, then verifies the live asset-version global. Humans only. |
 
-Both deploys fail with "run Build first" when there is no build, and start their log with which build and commit they are deploying.
+Both deploys refuse uncommitted changes before packaging or claiming a release.
+Production fetches and requires HEAD to be on the upstream branch before claiming.
+C is `git rev-list --count HEAD`, captured with the full source hash before the
+VERSION claim commit. N is claimed through `scripts/release-version.mjs`, using
+the highest existing release folder as a floor. Release folders never overwrite.
+
+Versions are written directly into HTML asset URLs and
+`self.__BIFURCATION_DIAGRAM_ASSET_VERSION__`; bundles read the global for runtime
+shader fetches and contain no release version. `build.json` records version, N,
+C, source identity, build time and SHA-256 hashes of every non-HTML asset.
+Production compares those hashes with `Export/Local/build.json` when source
+commits match. Differences warn per file without blocking deployment.
 
 ```powershell
-.\RunDev.cmd
-.\Build.cmd
+.\RunLocal.cmd
 .\DeployLocal.cmd
-# $env:PORT=7140; node actions\DeployLocal.mjs
+# $env:PORT=7120; node actions\DeployLocal.mjs
 # .\DeployProd.cmd   # humans / dashboard only
 ```
 
-`npm run export` is Build. `Export-Static.ps1` and `Export-Static.cmd` are removed.
+`npm run export` runs Deploy Local. `PORT` defaults to 8080, matching
+`StartServer.cmd`. Stop an existing server before deploying locally.
+Old export folders and metadata are left untouched and are no longer consumed.
 
 ## Smoke-test checklist
 
-Deploy Local serves the stamped copy. Open `http://127.0.0.1:8080` (or `PORT`) and confirm the page contains `b<k>-local` and not `__VERSION__`. Then:
+Open `http://127.0.0.1:8080` (or `PORT`) after Deploy Local:
 
+- [ ] HTML asset URLs and global contain `0.0.C`, matching `build.json`
 - [ ] Diagram accumulates and reaches ready state
 - [ ] Pan, scroll zoom, and double-click reset work
 - [ ] Settings sliders and colour palette apply
-- [ ] Minimap shows overview + viewport box
-- [ ] Desktop hover shows `r=` readout under minimap
+- [ ] Minimap shows overview and viewport box
 - [ ] Resolution label updates on resize
 - [ ] WebGPU initialises (requires localhost or HTTPS)
 
-After upload (if used):
+After a human runs Deploy Prod:
 
-- [ ] Remote `index.html` contains `self.__BIFURCATION_DIAGRAM_ASSET_VERSION__ = "N"`
-- [ ] `N` is the number Deploy Prod claimed (`Export/VersionN`), not the build folder
+- [ ] Live asset-version global equals the full `0.N.C` version
+- [ ] `Export/VersionN/build.json` identifies the intended source commit
 - [ ] Hosted URL is HTTPS
-
-## Implementation status
-
-| Script | Status |
-|---|---|
-| `actions/RunDev.mjs` | Implemented (opens `StartServer.cmd`) |
-| `actions/Build.mjs` | Implemented (`Export/Build<k>`, placeholder version) |
-| `actions/DeployLocal.mjs` | Implemented (stamp + serve, no rebuild) |
-| `actions/DeployProd.mjs` | Implemented (claim, stamp, upload, verify; humans only) |
-| `actions/lib/build.mjs` | Shared helpers |
-| `RunDev.cmd` / `Build.cmd` / `DeployLocal.cmd` / `DeployProd.cmd` | Thin wrappers |
-| `export-static.mjs` | Packager used by Build (`packageInto`); not a release entry point |
-| `StartServer.cmd` | Dev server (`%PORT%` or 8080) |
-| `Export/latest.json` | Written by Build |
-| S3 upload + verify | `actions/DeployProd.mjs` only |

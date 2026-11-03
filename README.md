@@ -4,11 +4,11 @@ Interactive viewer for the classic bifurcation diagram of the logistic map. Accu
 
 ## Quick start
 
-Double-click `StartServer.cmd`, or `RunDev.cmd` (same server, in its own window). Both need [Node.js LTS](https://nodejs.org/).
+Double-click `StartServer.cmd`, or `RunLocal.cmd` (same server, in its own window). Both need [Node.js LTS](https://nodejs.org/).
 
 ```powershell
 .\StartServer.cmd
-# or: .\RunDev.cmd
+# or: .\RunLocal.cmd
 ```
 
 Open [http://localhost:8080](http://localhost:8080) in a WebGPU-capable browser (Chrome or Edge 113+).
@@ -17,16 +17,17 @@ No build step is required for development. The launcher downloads the static ser
 
 ## Repository commands
 
-Build once, then deploy that build (see [deploy.md](deploy.md)):
+Each deploy packages a fresh build (see [deploy.md](deploy.md)):
 
 ```powershell
-.\RunDev.cmd        # working tree, no build; own window
-.\Build.cmd         # Export/Build<k> with __VERSION__ left in the HTML
-.\DeployLocal.cmd   # stamp b<k>-local into a copy and serve it; own window
-# .\DeployProd.cmd  # humans only: claim VERSION, stamp Export/VersionN, upload
+.\RunLocal.cmd      # working tree; own server window
+.\DeployLocal.cmd   # package Export/Local as 0.0.C; own server window
+# .\DeployProd.cmd  # humans only: claim N, package 0.N.C, upload, verify
 ```
 
-Deploy Local and Deploy Prod never rebuild. They fail with "run Build first" when there is no build. `PORT` overrides the default 8080.
+Both deploys require a clean working tree. Production also requires HEAD on the
+upstream branch. `PORT` overrides the default 8080. Install packaging dependencies
+with `npm ci` first. `npm run export` runs Deploy Local.
 
 ## What it shows
 

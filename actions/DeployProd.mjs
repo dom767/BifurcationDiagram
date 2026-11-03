@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 // @ts-check
-/**
- * Deploy Prod — ship the latest Build: claim VERSION, stamp it into Export/VersionN, upload,
- * verify the live asset version. It never rebuilds, so what goes live is what Deploy Local served.
- * Humans only (dashboard confirms). Agents must never run this.
- */
+/** Deploy Prod: claim, package 0.N.C, upload and verify. Humans only. */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { describe, exportRoot, highestRelease, latestBuild, root, stampCopy } from "./lib/build.mjs";
-import { claimVersion } from "../scripts/release-version.mjs";
+import { compareToLocal, describe, exportRoot, highestRelease, packageBuild, prepareDir, requireClean, root, writeManifest } from "./lib/build.mjs";
+import { assertHeadOnUpstream, claimVersion, commitCount, formatVersion, sourceOf } from "../scripts/release-version.mjs";
 
 const ASSET_VERSION_GLOBAL = "__BIFURCATION_DIAGRAM_ASSET_VERSION__";
 const bucket = process.env.BIFURCATION_S3_BUCKET ?? "baffledcat.com";
@@ -65,7 +61,7 @@ function ensureAwsAuth() {
  * @param {string} expectedVersion
  */
 async function verifyRemoteVersion(publicUrl, expectedVersion) {
-  const res = await fetch(publicUrl);
+  const res = await fetch(`${publicUrl}?v=${expectedVersion}`, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Failed to fetch ${publicUrl}: HTTP ${res.status}`);
   }
@@ -77,18 +73,20 @@ async function verifyRemoteVersion(publicUrl, expectedVersion) {
 }
 
 try {
-  const build = latestBuild();
-  console.log(`Deploy Prod: ${describe(build)}`);
-  if (build.source?.uncommittedChanges) {
-    console.warn("Warning: this build has uncommitted changes in it.");
-  }
-
+  const source = sourceOf(root);
+  requireClean(source);
+  assertHeadOnUpstream(root);
+  const c = commitCount(root);
   const n = claimVersion(root, { floor: highestRelease() });
-  const version = String(n);
-  const dir = stampCopy(build.dir, path.join(exportRoot, `Version${n}`), version);
+  const version = formatVersion(n, c);
+  console.log(`Deploy Prod: ${describe(version, source)}`);
+  const dir = prepareDir(path.join(exportRoot, `Version${n}`));
+  await packageBuild({ dir, version });
+  const manifest = writeManifest(dir, { version, n, c, source });
+  compareToLocal(manifest);
   const s3Base = `s3://${bucket}/${prefix}`;
 
-  console.log(`\nStamped ${version} into ${path.relative(root, dir).split(path.sep).join("/")}`);
+  console.log(`\nPackaged ${version} into ${path.relative(root, dir).split(path.sep).join("/")}`);
   ensureAwsAuth();
   console.log(`\nUploading to ${s3Base}`);
 

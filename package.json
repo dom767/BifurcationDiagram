@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "export": "node actions/Build.mjs"
+    "export": "node actions/DeployLocal.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
